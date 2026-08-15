@@ -139,7 +139,7 @@ Futures marks, exit_reason completeness, cooldown, longer-hold redesign foundati
 
 ## 8. Next Action
 
-Human path: paper fills via `scripts/paper_loop.ps1` → `retrain.py --promote` → `docs/M6_PRELIVE.md`.
+**Mission:** paper fills only (`docs/PAPER_TRAIN.md`). Analyzer ON. Retrain when real quality holds clear gates. No live.
 
 ---
 

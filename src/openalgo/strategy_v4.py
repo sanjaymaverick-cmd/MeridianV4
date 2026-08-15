@@ -37,10 +37,10 @@ from engine import (  # noqa: E402
     decide,
     manage,
 )
-from paper_sink import append_close  # noqa: E402
+from paper_sink import PAPER_CSV, append_close  # noqa: E402
 from predict import load_artefact  # noqa: E402
 from primary import signal_from_quote  # noqa: E402
-from quotes import DryFeed, OpenAlgoFeed, Quote, QuoteFeed  # noqa: E402
+from quotes import DryFeed, FallbackFeed, OpenAlgoFeed, Quote, QuoteFeed, YFinanceFeed  # noqa: E402
 from session import nse_open  # noqa: E402
 from state import dump as dump_state, killed, load as load_state  # noqa: E402
 
@@ -79,12 +79,13 @@ def _order_client():
 
 
 def _quote_feed() -> QuoteFeed:
+    yf = YFinanceFeed()
     if MODE == "dry":
         return DryFeed()
     if not API_KEY:
-        raise RuntimeError("quote poll needs OPENALGO_API_KEY")
+        return yf  # paper-train without broker quotes
     from openalgo import api  # type: ignore
-    return OpenAlgoFeed(api(api_key=API_KEY, host=HOST))
+    return FallbackFeed(OpenAlgoFeed(api(api_key=API_KEY, host=HOST)), yf)
 
 
 def _qty(price: float, size_pct: float, budget: float | None = None) -> float:
@@ -114,7 +115,7 @@ class Host:
         self.art = load_artefact()
         self.kind, self.client = _order_client()
         self.persist = persist
-        self.sink = sink
+        self.sink = sink if sink is not None else (PAPER_CSV if MODE == "paper" else None)
         self.risk = RiskState(live=(MODE == "live"), killed=killed())
         self.pos: dict[str, Position] = {}
         self.heat = 0.0
@@ -131,17 +132,26 @@ class Host:
         if self.persist and MODE != "dry":
             dump_state(self.pos, self.risk)
 
-    def _send(self, symbol: str, action: str, qty: float) -> None:
+    def _send(self, symbol: str, action: str, qty: float,
+              last_price: float = 0.0, now: Optional[datetime] = None) -> None:
         print(f"{MODE} {action} {symbol} qty={qty}")
         notify(self.client, OA_USER, f"MeridianV4 {MODE} {action} {symbol} x{qty}")
         if self.client is None:
             return
         if self.kind == "api":
             ex = EXCHANGE.get(symbol, "NSE")
+            product = PRODUCT.get(ex, "MIS")
+            ptype = "MARKET"
+            kw = {}
+            # Paper after square-off / weekend: CNC LIMIT (Analyzer still records)
+            if MODE == "paper" and ex == "NSE" and not nse_open(now or datetime.now(timezone.utc)):
+                product = "CNC"
+                ptype = "LIMIT"
+                if last_price > 0:
+                    kw["price"] = str(round(last_price, 2))
             self.client.placeorder(
                 strategy=STRATEGY_NAME, symbol=symbol, action=action,
-                exchange=ex, price_type="MARKET",
-                product=PRODUCT.get(ex, "MIS"), quantity=qty,
+                exchange=ex, price_type=ptype, product=product, quantity=qty, **kw,
             )
         else:
             self.client.strategyorder(symbol, action, qty)
@@ -158,7 +168,7 @@ class Host:
             if intent.action == "SELL":
                 pos = self.pos.pop(sym)
                 qty = pos.qty or _qty(last_price, pos.size_pct)
-                self._send(sym, "SELL", qty)
+                self._send(sym, "SELL", qty, last_price, now)
                 self.heat = max(0.0, self.heat - pos.size_pct)
                 hold = (now - pos.entry_ts).total_seconds()
                 pnl = (last_price - pos.entry_price) * qty
@@ -196,7 +206,7 @@ class Host:
         intent = decide(sig, self.art, self.risk, now)
         if intent.action == "BUY":
             qty = _qty(last_price, intent.size_pct)
-            self._send(sym, "BUY", qty)
+            self._send(sym, "BUY", qty, last_price, now)
             self.pos[sym] = Position(
                 symbol=sym, entry_price=last_price, entry_ts=now,
                 stop_pct=intent.stop_pct, size_pct=intent.size_pct,

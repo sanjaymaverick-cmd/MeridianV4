@@ -11,7 +11,7 @@ sys.path.insert(0, str(ROOT / "src" / "openalgo"))
 sys.path.insert(0, str(ROOT / "src" / "decision"))
 
 from primary import signal_from_quote  # noqa: E402
-from quotes import DryFeed, Quote  # noqa: E402
+from quotes import DryFeed, FallbackFeed, Quote  # noqa: E402
 from session import minutes_to_eod, nse_open  # noqa: E402
 from strategy_v4 import Host, poll_once  # noqa: E402
 
@@ -34,6 +34,17 @@ def test_primary_causal_bounds():
     assert s.confluence in (70.4, 73.6)
     assert 0.008 <= s.atr_pct <= 0.06
     assert s.symbol == "INFY"
+
+
+def test_fallback_when_primary_empty():
+    class Empty(DryFeed):
+        def fetch(self, pairs):
+            return {}
+
+    sec = DryFeed()
+    sec.push(Quote("INFY", "NSE", 1100, 1090, 1110, 1085, 1095))
+    got = FallbackFeed(Empty(), sec).fetch([("INFY", "NSE")])
+    assert got["INFY"].ltp == 1100
 
 
 def test_poll_once_dry():

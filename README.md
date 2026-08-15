@@ -92,7 +92,7 @@ Futures contamination is fully flagged and excluded from the clean set.
 
 ## Next
 
-**You do next:** official OpenAlgo at http://127.0.0.1:5000 — `docs/OPENALGO_PAPER.md`. Then paper fills → `retrain.py --promote` → `docs/M6_PRELIVE.md`.
+**Current mission:** paper-only training (`docs/PAPER_TRAIN.md`). Analyzer ON. No live / Auto.
 
 ---
 

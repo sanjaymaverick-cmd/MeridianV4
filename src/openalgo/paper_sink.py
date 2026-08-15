@@ -9,6 +9,7 @@ from typing import Mapping
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CSV = ROOT / "data" / "meta_labels" / "meridian_v4_meta_labels.csv"
+PAPER_CSV = ROOT / "data" / "meta_labels" / "meridian_v4_paper_fills.csv"
 
 SHORT_HOLD_SEC = 120
 MIN_QUALITY_HOLD_SEC = 300

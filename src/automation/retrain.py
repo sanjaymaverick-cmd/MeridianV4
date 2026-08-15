@@ -16,6 +16,7 @@ import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[2]
+PAPER = ROOT / "data" / "meta_labels" / "meridian_v4_paper_fills.csv"
 sys.path.insert(0, str(ROOT / "src" / "meta_label"))
 sys.path.insert(0, str(ROOT / "src" / "automation"))
 
@@ -47,6 +48,12 @@ def load_frames(include_synth: bool) -> pd.DataFrame:
         df = pd.read_csv(REAL, parse_dates=["buy_time", "sell_time"])
         if "is_synthetic" not in df.columns:
             df["is_synthetic"] = 0
+    if PAPER.exists() and PAPER.stat().st_size > 0:
+        extra = pd.read_csv(PAPER, parse_dates=["buy_time", "sell_time"])
+        extra["is_synthetic"] = 0
+        if "is_clean" not in extra.columns:
+            extra["is_clean"] = 1
+        df = pd.concat([df, extra], ignore_index=True)
     df = df[df["is_clean"] == 1].copy().sort_values("buy_time").reset_index(drop=True)
     return df
 
