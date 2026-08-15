@@ -1,7 +1,7 @@
 # Meridian V4 – Build Master Spec
 
 **Last updated:** 15 Aug 2026  
-**Status:** Active build – M4 skeleton (synth scaffolding)  
+**Status:** Active build – M4 done, M5 next  
 **Location:** `/home/workdir/artifacts` (temporary; V4 will move to separate repo provided by user)
 
 ---
@@ -129,7 +129,8 @@ Futures marks, exit_reason completeness, cooldown, longer-hold redesign foundati
 | M1 Data Pipeline | Done | `build_meta_labels_v4.py`, `meridian_v4_meta_labels.csv/.db`, `M1_validation_report.md` |
 | M2 Research Baseline | Done | TBM + purged/CPCV, `meta_label_v4.json`, `docs/M2_RESEARCH.md` |
 | M3 Decision Engine | Done | `src/decision/engine.py`, `docs/M3_ENGINE.md` |
-| M4 OpenAlgo Paper | Skeleton | `strategy_v4.py` + `paper_sink.py`. Need quote poll. |
+| M4 OpenAlgo Paper | Done | Quote poll, causal primary, paper_sink. |
+| M5 Automation Gates | Next | Retrain + registry + promotion |
 
 **M1 Results (clean subset):** 157 clean rows | 16 quality holds (≥300s) | 173 short holds | Contaminated futures fully flagged and excluded from clean set.
 
@@ -137,7 +138,7 @@ Futures marks, exit_reason completeness, cooldown, longer-hold redesign foundati
 
 ## 8. Next Action
 
-Proceed to **M4 quote loop** then **M5 automation gates**. Need real longer-hold paper fills before promotion.
+Proceed to **M5 automation gates**. Real longer-hold paper fills required before any promotion.
 
 ---
 

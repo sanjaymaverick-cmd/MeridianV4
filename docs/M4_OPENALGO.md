@@ -1,18 +1,22 @@
-# M4 – OpenAlgo wrapper (skeleton)
+# M4 – OpenAlgo paper path
 
-**Files:** `src/openalgo/strategy_v4.py`, `src/openalgo/paper_sink.py`
+**Files:** `strategy_v4.py`, `paper_sink.py`, `quotes.py`, `primary.py`, `session.py`
 
-## Host
-1. Set `MERIDIAN_ROOT` to this repo.
-2. Upload/run `strategy_v4.py` in OpenAlgo Python Strategy Host.
-3. `MERIDIAN_MODE=dry` (default) or `paper`.
-4. Paper needs `OPENALGO_HOST` + `OPENALGO_WEBHOOK_ID` (create strategy, platform=Python).
+## Run
+```
+MERIDIAN_MODE=dry python src/openalgo/strategy_v4.py          # demo
+MERIDIAN_LOOP=1 MERIDIAN_MAX_TICKS=3 python src/openalgo/strategy_v4.py
+MERIDIAN_MODE=paper OPENALGO_API_KEY=... OPENALGO_HOST=http://127.0.0.1:5000 \
+  MERIDIAN_LOOP=1 python src/openalgo/strategy_v4.py
+```
+Paper Analyzer: `client.analyzertoggle(mode=True)` on the OpenAlgo box first.
 
 ## Loop
-`on_signal(Signal, last_price)` → `decide` / `manage` → `strategyorder` → on SELL, `append_close` to `data/meta_labels/meridian_v4_meta_labels.csv` (`is_synthetic=0`).
+`quotes/multiquotes` → causal primary (`signal_from_quote`) → `decide`/`manage` → `placeorder` or `strategyorder` → SELL appends `is_synthetic=0`.
 
-## Markets
-NSE cash (MIS, EOD flatten) + `BNBUSDT` on DELTA. No other venues.
+NSE session 09:15–15:30 IST, flatten 15:15. `BNBUSDT` on DELTA, no cash EOD.
 
-## Not yet
-Broker quote poll, Historify bars, Telegram, Analyzer P&L sync. Next: wire quotes + schedule.
+## Env
+`MERIDIAN_ROOT`, `MERIDIAN_MODE=dry|paper`, `MERIDIAN_SYMBOLS`, `MERIDIAN_POLL_SEC`, `OPENALGO_API_KEY`, `OPENALGO_HOST`, `OPENALGO_WEBHOOK_ID`.
+
+No secrets in repo. Quote poll requires API key (webhook cannot quote).
