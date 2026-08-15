@@ -7,9 +7,11 @@
 - Ledger: `research/experiment_ledger.jsonl` (`M2_tbm`)
 - Result: y_meta 18.5% (103/557). Purged AUC 0.55 / CPCV 0.58. Synth scaffolding.
 
-## M3 – Decision Engine  SKELETON (next)
-- File: `src/decision/engine.py`
-- Next: consume artefact `meta_prob`, longer-hold `manage()`, hard gates.
+## M3 – Decision Engine  DONE
+- File: `src/decision/engine.py` + `docs/M3_ENGINE.md`
+- Consumes `meta_label_v4.json` (no sklearn).
+- `decide()` + `manage()` (min hold 300s, hard stop, TP 1.5R, trail).
+- Tests: `tests/test_m3_engine.py`
 
 ## Blocker
 Real clean still ~1 positive. Paper longer-holds required before live promotion.

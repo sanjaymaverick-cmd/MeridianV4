@@ -17,7 +17,7 @@ FEATURES = [
     "approx_stop_pct",
     "minutes_since_midnight",
     "minutes_to_eod_flatten",
-    "belief_posterior",
+    # belief_posterior omitted: constant in V3-derived set
 ]
 
 
@@ -45,6 +45,9 @@ def predict_meta_prob(features: Mapping[str, float], art: dict | None = None) ->
     acc = intercept
     for i, name in enumerate(names):
         raw = float(features.get(name, 0.0) or 0.0)
-        z = (raw - mean[i]) / (scale[i] if scale[i] else 1.0)
+        if abs(scale[i]) < 1e-6:
+            z = 0.0
+        else:
+            z = (raw - mean[i]) / scale[i]
         acc += coef[i] * z
     return _sigmoid(acc)

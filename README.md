@@ -47,7 +47,7 @@ MeridianV4/
 | M0 – Master Spec | Done | This repo + BUILD_PLAN.md |
 | M1 – Data Pipeline | Done | Clean 157-row set, longer-hold flags, contamination handling |
 | M2 – Research Baseline | Done | TBM +1R/−1R, uniqueness, purged/CPCV. Artefact JSON. Synth only. |
-| M3 – Decision Engine | Next | Consume meta_prob; longer-hold manage() |
+| M3 – Decision Engine | Done | meta_prob from JSON; longer-hold manage(); hard gates |
 | M4 – OpenAlgo Paper | Pending | Hosted strategy + closed-loop learning |
 | M5 – Automation Gates | Pending | Retrain + promotion rules |
 | M6 – Live | Pending | Small capital → production |
@@ -85,7 +85,7 @@ Futures contamination is fully flagged and excluded from the clean set.
 
 ## Next
 
-Proceed to **M3 – Decision Engine** (consume `meta_label_v4.json`, longer-hold exits).
+Proceed to **M4 – OpenAlgo paper wrapper**.
 
 ---
 

@@ -42,7 +42,6 @@ FEATURES = [
     "approx_stop_pct",
     "minutes_since_midnight",
     "minutes_to_eod_flatten",
-    "belief_posterior",
 ]
 
 
@@ -101,7 +100,7 @@ def fit_export(X, y, w) -> dict:
         "ts": datetime.now(timezone.utc).isoformat(),
         "features": FEATURES,
         "scaler_mean": sc.mean_.astype(float).tolist(),
-        "scaler_scale": sc.scale_.astype(float).tolist(),
+        "scaler_scale": [max(float(s), 1e-8) for s in sc.scale_],
         "coef": clf.coef_.ravel().astype(float).tolist(),
         "intercept": float(clf.intercept_[0]),
         "threshold": 0.55,

@@ -21,9 +21,11 @@
 
 | Split | mean AUC |
 |-------|----------|
-| Purged K-fold | 0.546 |
-| CPCV | 0.584 |
-| In-sample | 0.738 |
+| Purged K-fold | 0.534 |
+| CPCV | 0.562 |
+| In-sample | 0.675 |
+
+`belief_posterior` dropped (constant). ~27% of combined rows score ≥0.55.
 
 ## Rules
 - `is_synthetic=1` is scaffolding. **Do not promote on these metrics.**
