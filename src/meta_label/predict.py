@@ -27,6 +27,17 @@ def load_artefact(path: Path | None = None) -> dict:
         return json.load(f)
 
 
+def load_artefact_safe(path: Path | None = None) -> dict | None:
+    """None if missing or unreadable. Live path must never crash the host."""
+    p = Path(path) if path else DEFAULT_ARTEFACT
+    if not p.exists():
+        return None
+    try:
+        return load_artefact(p)
+    except (OSError, json.JSONDecodeError, TypeError, ValueError):
+        return None
+
+
 def _sigmoid(x: float) -> float:
     if x >= 0:
         z = math.exp(-x)
@@ -43,11 +54,15 @@ def predict_meta_prob(features: Mapping[str, float], art: dict | None = None) ->
     coef = art["coef"]
     intercept = float(art["intercept"])
     acc = intercept
-    for i, name in enumerate(names):
-        raw = float(features.get(name, 0.0) or 0.0)
-        if abs(scale[i]) < 1e-6:
-            z = 0.0
-        else:
-            z = (raw - mean[i]) / scale[i]
-        acc += coef[i] * z
+    n = min(len(names), len(mean), len(scale), len(coef))
+    for i in range(n):
+        try:
+            raw = float(features.get(names[i], 0.0) or 0.0)
+        except (TypeError, ValueError):
+            raw = 0.0
+        if raw != raw or raw in (float("inf"), float("-inf")):
+            raw = 0.0
+        s = float(scale[i])
+        z = 0.0 if abs(s) < 1e-6 else (raw - float(mean[i])) / s
+        acc += float(coef[i]) * z
     return _sigmoid(acc)

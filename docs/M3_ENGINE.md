@@ -22,3 +22,12 @@
 | else | HOLD |
 
 Live path: no sklearn. JSON sigmoid only.
+
+## Production guards
+- NaN / inf features → finite defaults. Never crash the host.
+- Missing or corrupt artefact → `p_success` fallback (`UntrainedModel`).
+- `Engine` wraps `decide`/`manage` + optional `load_model()`.
+- Daily PnL rolls on IST date change (`RiskState.roll_day`).
+- `manage` on `last_price <= 0` → HOLD `bad_price`.
+
+Load: `from model import load_model`.
