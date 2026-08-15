@@ -92,7 +92,7 @@ Futures contamination is fully flagged and excluded from the clean set.
 
 ## Next
 
-**You do next:** run paper (`scripts/paper_loop.ps1`) until gates pass, then `docs/M6_PRELIVE.md`. Software stack M0–M6 is in-repo.
+**You do next:** official OpenAlgo at http://127.0.0.1:5000 — `docs/OPENALGO_PAPER.md`. Then paper fills → `retrain.py --promote` → `docs/M6_PRELIVE.md`.
 
 ---
 
