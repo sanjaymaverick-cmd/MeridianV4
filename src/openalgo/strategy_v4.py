@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Optional
 
 ROOT = Path(os.environ.get("MERIDIAN_ROOT", Path(__file__).resolve().parents[2]))
+sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "src" / "decision"))
 sys.path.insert(0, str(ROOT / "src" / "meta_label"))
 sys.path.insert(0, str(ROOT / "src" / "openalgo"))
@@ -38,18 +39,31 @@ from engine import (  # noqa: E402
     manage,
 )
 from paper_sink import PAPER_CSV, append_close  # noqa: E402
-from predict import load_artefact  # noqa: E402
+from predict import load_artefact_safe  # noqa: E402
 from primary import signal_from_quote  # noqa: E402
 from quotes import DryFeed, FallbackFeed, OpenAlgoFeed, Quote, QuoteFeed, YFinanceFeed  # noqa: E402
-from session import nse_open  # noqa: E402
+from session import nse_open, to_ist  # noqa: E402
 from state import dump as dump_state, killed, load as load_state  # noqa: E402
 
+try:
+    from model import load_model  # noqa: E402
+except ImportError:  # pragma: no cover
+    load_model = None  # type: ignore
+
+_STOP = False
+
+
+def request_stop(*_args) -> None:
+    global _STOP
+    _STOP = True
+    print("shutdown requested", flush=True)
+
 MODE = os.environ.get("MERIDIAN_MODE", "dry").lower()
-HOST = os.environ.get("OPENALGO_HOST", "http://127.0.0.1:5000")
+HOST = os.environ.get("OPENALGO_HOST") or os.environ.get("HOST_SERVER", "http://127.0.0.1:5000")
 WEBHOOK = os.environ.get("OPENALGO_WEBHOOK_ID", "")
 API_KEY = os.environ.get("OPENALGO_API_KEY", "")
 OA_USER = os.environ.get("OPENALGO_USERNAME", "")
-STRATEGY_NAME = "MeridianV4"
+STRATEGY_NAME = os.environ.get("STRATEGY_NAME", "MeridianV4")
 LIVE_OK = os.environ.get("MERIDIAN_LIVE_OK", "0") == "1"
 POLL_SEC = float(os.environ.get("MERIDIAN_POLL_SEC", "30"))
 WATCH = [s.strip() for s in os.environ.get(
@@ -112,7 +126,8 @@ def preflight(client) -> None:
 
 class Host:
     def __init__(self, persist: bool = True, sink: Path | None = None, restore: bool = False):
-        self.art = load_artefact()
+        self.model = load_model() if load_model else None
+        self.art = self.model.artefact if self.model is not None else load_artefact_safe()
         self.kind, self.client = _order_client()
         self.persist = persist
         self.sink = sink if sink is not None else (PAPER_CSV if MODE == "paper" else None)
@@ -127,48 +142,63 @@ class Host:
             self.risk.n_open = len(self.pos)
         if MODE in ("paper", "live"):
             preflight(self.client)
+        kind = self.model.kind if self.model is not None else "json"
+        ver = self.model.version if self.model is not None else "?"
+        print(f"model {kind} v={ver} trained={getattr(self.model, 'trained', False)}", flush=True)
 
     def _save(self) -> None:
         if self.persist and MODE != "dry":
             dump_state(self.pos, self.risk)
 
     def _send(self, symbol: str, action: str, qty: float,
-              last_price: float = 0.0, now: Optional[datetime] = None) -> None:
-        print(f"{MODE} {action} {symbol} qty={qty}")
-        notify(self.client, OA_USER, f"MeridianV4 {MODE} {action} {symbol} x{qty}")
+              last_price: float = 0.0, now: Optional[datetime] = None) -> bool:
+        print(f"{MODE} {action} {symbol} qty={qty}", flush=True)
+        notify(self.client, OA_USER, f"{STRATEGY_NAME} {MODE} {action} {symbol} x{qty}")
         if self.client is None:
-            return
-        if self.kind == "api":
-            ex = EXCHANGE.get(symbol, "NSE")
-            product = PRODUCT.get(ex, "MIS")
-            ptype = "MARKET"
-            kw = {}
-            # Paper after square-off / weekend: CNC LIMIT (Analyzer still records)
-            if MODE == "paper" and ex == "NSE" and not nse_open(now or datetime.now(timezone.utc)):
-                product = "CNC"
-                ptype = "LIMIT"
-                if last_price > 0:
-                    kw["price"] = str(round(last_price, 2))
-            self.client.placeorder(
-                strategy=STRATEGY_NAME, symbol=symbol, action=action,
-                exchange=ex, price_type=ptype, product=product, quantity=qty, **kw,
-            )
-        else:
-            self.client.strategyorder(symbol, action, qty)
+            return True
+        try:
+            if self.kind == "api":
+                ex = EXCHANGE.get(symbol, "NSE")
+                product = PRODUCT.get(ex, "MIS")
+                ptype = "MARKET"
+                kw = {}
+                # Paper after square-off / weekend: CNC LIMIT (Analyzer still records)
+                if MODE == "paper" and ex == "NSE" and not nse_open(now or datetime.now(timezone.utc)):
+                    product = "CNC"
+                    ptype = "LIMIT"
+                    if last_price > 0:
+                        kw["price"] = str(round(last_price, 2))
+                self.client.placeorder(
+                    strategy=STRATEGY_NAME, symbol=symbol, action=action,
+                    exchange=ex, price_type=ptype, product=product, quantity=qty, **kw,
+                )
+            else:
+                self.client.strategyorder(symbol, action, qty)
+            return True
+        except Exception as e:
+            print("order_fail", symbol, action, e, flush=True)
+            return False
 
     def on_signal(self, sig: Signal, last_price: float, now: Optional[datetime] = None) -> Intent:
         now = now or datetime.now(timezone.utc)
+        self.risk.roll_day(to_ist(now).date().isoformat())
         self.risk.killed = self.risk.killed or killed()
         self.risk.n_open = len(self.pos)
         sym = sig.symbol
         sig.portfolio_heat = self.heat
 
+        if last_price <= 0:
+            return Intent("FLAT", 0.0, 0.0, "bad_price")
+
         if sym in self.pos:
             intent = manage(self.pos[sym], last_price, now, sig.minutes_to_eod)
             if intent.action == "SELL":
-                pos = self.pos.pop(sym)
+                pos = self.pos[sym]
                 qty = pos.qty or _qty(last_price, pos.size_pct)
-                self._send(sym, "SELL", qty, last_price, now)
+                if not self._send(sym, "SELL", qty, last_price, now):
+                    return Intent("HOLD", pos.size_pct, pos.stop_pct, "order_fail",
+                                  meta_prob=pos.meta_prob)
+                self.pos.pop(sym)
                 self.heat = max(0.0, self.heat - pos.size_pct)
                 hold = (now - pos.entry_ts).total_seconds()
                 pnl = (last_price - pos.entry_price) * qty
@@ -206,7 +236,8 @@ class Host:
         intent = decide(sig, self.art, self.risk, now)
         if intent.action == "BUY":
             qty = _qty(last_price, intent.size_pct)
-            self._send(sym, "BUY", qty, last_price, now)
+            if not self._send(sym, "BUY", qty, last_price, now):
+                return Intent("FLAT", 0.0, 0.0, "order_fail", meta_prob=intent.meta_prob)
             self.pos[sym] = Position(
                 symbol=sym, entry_price=last_price, entry_ts=now,
                 stop_pct=intent.stop_pct, size_pct=intent.size_pct,
@@ -229,34 +260,54 @@ def poll_once(
     now: Optional[datetime] = None,
 ) -> list[Intent]:
     now = now or datetime.now(timezone.utc)
-    got = feed.fetch(pairs(symbols))
+    try:
+        got = feed.fetch(pairs(symbols))
+    except Exception as e:
+        print("quote_fail", e, flush=True)
+        return []
     intents: list[Intent] = []
-    for sym, q in got.items():
-        if q.exchange == "NSE" and not nse_open(now) and MODE != "dry":
-            continue
-        sig = signal_from_quote(q, now)
-        if MODE != "dry" and host.kind == "api":
-            ap = atr_pct_from_history(host.client, q.symbol, q.exchange)
-            if ap:
-                sig.atr_pct = ap
-                sig.approx_stop_pct = 1.5 * ap
-        intents.append(host.on_signal(sig, q.ltp, now))
+    for sym, q in (got or {}).items():
+        try:
+            if q.exchange == "NSE" and not nse_open(now) and MODE != "dry":
+                continue
+            sig = signal_from_quote(q, now)
+            if MODE != "dry" and host.kind == "api":
+                ap = atr_pct_from_history(host.client, q.symbol, q.exchange)
+                if ap:
+                    sig.atr_pct = ap
+                    sig.approx_stop_pct = 1.5 * ap
+            intents.append(host.on_signal(sig, q.ltp, now))
+        except Exception as e:
+            print("tick_fail", sym, e, flush=True)
     return intents
 
 
 def run(max_ticks: Optional[int] = None, interval: Optional[float] = None,
         feed: Optional[QuoteFeed] = None) -> None:
+    import signal as _signal
+    import time as _t
+    try:
+        _signal.signal(_signal.SIGTERM, request_stop)
+        _signal.signal(_signal.SIGINT, request_stop)
+    except (ValueError, OSError):
+        pass
     host = Host(persist=(MODE != "dry"), restore=(MODE != "dry"))
     feed = feed or _quote_feed()
     n, gap = 0, interval if interval is not None else POLL_SEC
-    while True:
+    print(f"MeridianV4 run mode={MODE} watch={WATCH} poll={gap}s", flush=True)
+    while not _STOP:
         intents = poll_once(host, feed)
-        print(f"tick={n} open={list(host.pos)} n={len(intents)}")
+        print(f"tick={n} open={list(host.pos)} n={len(intents)}", flush=True)
         n += 1
         if max_ticks is not None and n >= max_ticks:
-            return
-        import time as _t
-        _t.sleep(gap)
+            break
+        slept = 0.0
+        while slept < gap and not _STOP:
+            step = min(0.5, gap - slept)
+            _t.sleep(step)
+            slept += step
+    host._save()
+    print("stopped", flush=True)
 
 
 def dry_demo() -> list[str]:

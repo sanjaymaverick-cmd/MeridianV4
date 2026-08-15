@@ -41,6 +41,7 @@ def dump(pos: dict[str, Position], risk: RiskState, path: Path | None = None) ->
             "daily_pnl": risk.daily_pnl,
             "killed": risk.killed,
             "live": risk.live,
+            "pnl_date": risk.pnl_date,
             "cooldown_until": {k: _iso(v) for k, v in risk.cooldown_until.items()},
         },
     }
@@ -67,6 +68,7 @@ def load(path: Path | None = None) -> tuple[dict[str, Position], RiskState]:
     risk.daily_pnl = float(rr.get("daily_pnl") or 0.0)
     risk.live = bool(rr.get("live") or False)
     risk.killed = risk.killed or bool(rr.get("killed") or False)
+    risk.pnl_date = str(rr.get("pnl_date") or "")
     for k, v in (rr.get("cooldown_until") or {}).items():
         risk.cooldown_until[k] = datetime.fromisoformat(v)
     risk.n_open = len(pos)
