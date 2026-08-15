@@ -3,97 +3,150 @@
 **Production-grade automated quant trading system**  
 India equities/F&O + Delta crypto · OpenAlgo execution · mlfinlab-style meta-labeling
 
+Training is **later**. The application is ship-ready without live fills.
+
 ---
 
-## Overview
+## Locked Decisions
 
-Meridian V4 is the next generation of the Meridian trading system.
-
-- **OpenAlgo** → Trading operating system (multi-broker, Python strategy host, sandbox, monitoring)
-- **Focused quant stack** → Research, meta-labeling, risk & portfolio (selected tools from awesome-quant)
-- **Meridian Decision Engine** → Thin, deterministic pure-Python layer that sits between research and live execution
-
-### Locked Decisions
 | Area | Choice |
 |------|--------|
 | Markets | India equities/F&O + Delta crypto |
-| Meta-label style | Full mlfinlab-style (triple-barrier, sequential bootstrap, purged CV) |
-| Holding behaviour | Redesign for longer, higher-quality holds |
-| Risk / promotion | Aggressive (once gates are cleared) |
-| Strategy style | Pure Python strategy hosted inside OpenAlgo |
+| Meta-label style | Full mlfinlab-style (TBM, uniqueness, purged CV) |
+| Holding | Longer, higher-quality holds (min 300s) |
+| Risk / promotion | Aggressive once gates clear |
+| Strategy | Pure Python hosted inside OpenAlgo |
+| V3 | Never touch V3 files |
 
 ---
 
-## Repository Structure
+## Layout
 
 ```
 MeridianV4/
-├── README.md
-├── docs/                          # BUILD_PLAN + milestone reports
-├── data/meta_labels/              # Clean + synth + TBM-labeled sets
-├── src/meta_label/                # TBM, purged CV, builders
-├── src/decision/                  # Thin pure-Python engine (M3)
-├── src/openalgo/                  # Hosted strategy + quote loop (M4)
-├── src/automation/                # Retrain, gates, registry (M5)
-├── research/                      # Ledger + artefact + registry
+├── src/settings.py paths.py logutil.py
+├── src/decision/engine.py          # live path (no sklearn)
+├── src/meta_label/
+│   ├── model.py                    # load_model() interface
+│   ├── predict.py                  # JSON logistic scorer
+│   ├── train.py                    # TODO(training) LightGBM stub
+│   ├── triple_barrier.py purged_cv.py uniqueness.py
+│   └── m2_research_baseline.py     # current trainer (logistic JSON)
+├── src/openalgo/
+│   ├── host.py                     # OpenAlgo /python upload entry
+│   ├── strategy_v4.py              # hosted loop
+│   ├── quotes.py primary.py session.py broker.py paper_sink.py state.py
+├── src/automation/                 # retrain + real-only gates + registry
+├── data/meta_labels/               # clean + synth + TBM
+├── research/artefacts/meta_label_v4.json
+├── docs/                           # BUILD_PLAN + milestone notes
 └── tests/
 ```
 
 ---
 
-## Current Status
+## Status
 
 | Milestone | Status | Notes |
 |-----------|--------|-------|
-| M0 – Master Spec | Done | This repo + BUILD_PLAN.md |
-| M1 – Data Pipeline | Done | Clean 157-row set, longer-hold flags, contamination handling |
-| M2 – Research Baseline | Done | TBM +1R/−1R, uniqueness, purged/CPCV. Artefact JSON. Synth only. |
-| M3 – Decision Engine | Done | meta_prob from JSON; longer-hold manage(); hard gates |
-| M4 – OpenAlgo Paper | Done | Quote poll + causal primary + paper/dry loop. Analyzer-ready. |
-| M5 – Automation Gates | Done | Retrain + real-only gates + registry. Current real fails (expected). |
-| M6 – Live | Gated | Code ready. Blocked until M5 gates pass. See `docs/M6_PRELIVE.md`. |
+| M0 Master Spec | Done | `docs/BUILD_PLAN.md` |
+| M1 Data Pipeline | Done | 157 clean real rows |
+| M2 Research Baseline | Done | TBM + purged/CPCV. Synth scaffolding (557). |
+| M3 Decision Engine | Done | Production guards. JSON `meta_prob`. |
+| M4 OpenAlgo wrapper | Done | Hostable. Paper/dry. SIGTERM. |
+| M5 Automation / gates | Done | Real-only promotion. Current real **fails** (expected). |
+| M6 Live | Gated | See `docs/M6_PRELIVE.md`. |
+| Training | **Later** | `docs/TRAINING_TODO.md` |
+
+Synth (`is_synthetic=1`) may scaffold models. It **cannot** promote.
 
 ---
 
-## Quick Start (Data)
+## Install
 
-```bash
-# Clean meta-label set (primary training data)
-data/meta_labels/meridian_v4_meta_labels.csv
-data/meta_labels/meridian_v4_meta_labels.db
-
-# Rebuild / refresh
-python src/meta_label/build_meta_labels_v4.py
-
-# M2: TBM labels + purged CV + artefact
-python src/meta_label/m2_research_baseline.py
-
-# M4 dry
-python src/openalgo/strategy_v4.py
-
-# M5 retrain (candidate only; will not promote on current real)
-python src/automation/retrain.py
+```powershell
+cd "D:\work Dir\MeridianV4"
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+# optional: pip install openalgo yfinance
+copy .env.example .env   # then edit; never commit
 ```
 
-**Important:** Always filter with `is_clean == 1` before any model training.  
-Futures contamination is fully flagged and excluded from the clean set.  
-`is_synthetic == 1` is scaffolding — not promotion-eligible.
+---
+
+## Run
+
+### Offline (no market, no broker)
+
+```powershell
+# tests
+python -m pytest tests
+# or: .\scripts\run_tests.ps1
+
+# dry demo
+$env:MERIDIAN_MODE = "dry"
+python src/openalgo/strategy_v4.py
+# or: .\scripts\run_dry.ps1
+
+# dry poll loop (synthetic book empty unless you push ticks)
+$env:MERIDIAN_LOOP = "1"
+$env:MERIDIAN_MAX_TICKS = "3"
+python src/openalgo/strategy_v4.py
+```
+
+### OpenAlgo paper (Analyzer ON — when markets are open)
+
+```powershell
+.\scripts\start_openalgo.ps1          # separate box / checkout
+$env:OPENALGO_API_KEY = "<from OpenAlgo UI>"
+.\scripts\paper_loop.ps1
+```
+
+Or upload `src/openalgo/host.py` to OpenAlgo → Python Strategies.  
+Set `MERIDIAN_ROOT` in OpenAlgo `.env` to this repo (absolute path).  
+Do **not** set `MERIDIAN_LIVE_OK`. Analyzer **ON**.
+
+### Retrain / gates (will not promote on current real)
+
+```powershell
+python src/automation/retrain.py              # candidate only
+python src/automation/retrain.py --promote    # promote iff gates pass
+python src/automation/gates.py                # exit 0 only if last eval passed
+```
+
+### Kill / rollback
+
+- Stop entries: create `research/runtime/KILL`
+- Rollback live artefact: `python -c "import sys; sys.path.insert(0,'src/automation'); from registry import rollback; rollback()"`
 
 ---
 
-## Principles
+## Model interface
 
-1. **Honest accounting** – post-fee, causal features only.
-2. **V3 isolation** – V3 files are never modified.
-3. **Thin live path** – heavy research stays offline; only the decision engine runs in OpenAlgo.
-4. **Reproducibility** – feature hashes + experiment ledger from day one.
+```python
+from model import load_model
+m = load_model()            # JsonLogisticModel or UntrainedModel
+p = m.predict(features)     # [0, 1]
+```
+
+Live path: JSON artefact, no sklearn.  
+Missing/corrupt artefact → `UntrainedModel` (primary `p_success`).  
+`LightGBMModel` is a `TODO(training)` stub.
+
+Always filter training rows with `is_clean == 1`.  
+`is_synthetic == 1` is not promotion-eligible.
+
+---
+
+## Env
+
+See `.env.example`. Hosted scripts also receive `OPENALGO_API_KEY`, `OPENALGO_HOST`, `STRATEGY_NAME`, `STRATEGY_ID`, `OPENALGO_STRATEGY_EXCHANGE`.
+
+No secrets in git.
 
 ---
 
 ## Next
 
-**Current mission:** paper-only training (`docs/PAPER_TRAIN.md`). Analyzer ON. No live / Auto.
-
----
-
-*Built for systematic edge. No look-ahead. No fantasy fills.*
+Paper fills when NSE is open → `docs/TRAINING_TODO.md`. Then `--promote`. Then `docs/M6_PRELIVE.md`.

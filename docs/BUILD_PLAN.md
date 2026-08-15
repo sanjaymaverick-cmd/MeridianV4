@@ -1,8 +1,8 @@
 # Meridian V4 – Build Master Spec
 
 **Last updated:** 15 Aug 2026  
-**Status:** Code complete M0–M6. Promotion + live blocked on real quality holds.  
-**Location:** `/home/workdir/artifacts` (temporary; V4 will move to separate repo provided by user)
+**Status:** Application ship-ready (M0–M6 code). Promotion + live blocked on real quality holds. Training is a later phase (`docs/TRAINING_TODO.md`).  
+**Repo:** https://github.com/sanjaymaverick-cmd/MeridianV4
 
 ---
 
@@ -139,7 +139,9 @@ Futures marks, exit_reason completeness, cooldown, longer-hold redesign foundati
 
 ## 8. Next Action
 
-**Mission:** paper fills only (`docs/PAPER_TRAIN.md`). Analyzer ON. Retrain when real quality holds clear gates. No live.
+App is built. Do not wait on data to change structure.
+
+**When markets open:** paper fills only (`docs/PAPER_TRAIN.md`). Analyzer ON. Then `docs/TRAINING_TODO.md`. No live.
 
 ---
 

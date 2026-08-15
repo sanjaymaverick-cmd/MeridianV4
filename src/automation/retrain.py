@@ -3,6 +3,10 @@
 
 Trains a candidate artefact (TBM + purged CV). Evaluates gates on REAL rows
 only. Promotes to live artefact only if gates pass (or --force, logged).
+
+TODO(training): swap fit_export logistic for LightGBM once real quality
+holds clear MIN_REAL_QUALITY / MIN_REAL_Y_META_POS. Keep JSON live scorer
+until then. Never evaluate gates on is_synthetic==1.
 """
 from __future__ import annotations
 
@@ -102,6 +106,7 @@ def run(include_synth: bool = True, do_promote: bool = False, force: bool = Fals
 
     vid = "m5_" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     dest = CAND_DIR / f"{vid}.json"
+    # TODO(training): LightGBM via meta_label.train.train_lightgbm when gates can pass
     art = fit_export(X, y, w, dest=dest, version=vid)
 
     metrics = real_metrics(df, art["in_sample"]["auc"])

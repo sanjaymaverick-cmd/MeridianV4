@@ -35,3 +35,5 @@ python -c "import sys; sys.path.insert(0,'src/automation'); from registry import
 ```
 
 Task Scheduler: `scripts/retrain_daily.ps1` after close. Paper: `scripts/paper_loop.ps1`.
+
+LightGBM trainer is a stub (`src/meta_label/train.py`). Current `retrain.py` writes logistic JSON candidates. See `docs/TRAINING_TODO.md`.

@@ -28,5 +28,12 @@
 - State persist + cooldown + Analyzer preflight
 - Checklist: `docs/M6_PRELIVE.md`
 
-## Blocker (human)
-Real clean still ~2 TBM+ / 16 quality holds. Run paper, then `--promote`. Do not live.
+## Ship-ready (15 Aug 2026, later same day)
+- Project package: `pyproject.toml`, `.env.example`, `src/{settings,paths,logutil}.py`
+- Model interface: `src/meta_label/model.py` (`load_model`)
+- Engine hardened (NaN, missing artefact, daily roll)
+- OpenAlgo host entry: `src/openalgo/host.py`
+- Training deferred: `docs/TRAINING_TODO.md`
+
+## Blocker (human — not a code blocker)
+Real clean still ~2 TBM+ / 16 quality holds. Run paper when markets open, then `--promote`. Do not live.
