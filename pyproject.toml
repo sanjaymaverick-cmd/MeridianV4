@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "meridian-v4"
+version = "0.4.0"
+description = "Meridian V4 — India + Delta crypto, OpenAlgo-hosted, mlfinlab-style meta-label"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Proprietary" }
+dependencies = [
+  "numpy>=1.26",
+  "pandas>=2.0",
+  "scikit-learn>=1.4",
+]
+
+[project.optional-dependencies]
+paper = ["yfinance>=0.2.40", "openalgo>=1.0"]
+# TODO(training): lightgbm, optuna, mlfinlab once real quality holds exist
+train = ["lightgbm>=4.0", "optuna>=3.0"]
+dev = ["pytest>=8.0"]
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["decision*", "meta_label*", "openalgo*", "automation*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = [
+  "src",
+  "src/decision",
+  "src/meta_label",
+  "src/openalgo",
+  "src/automation",
+]
+addopts = "-q"

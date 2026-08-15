@@ -1,7 +1,18 @@
+# Runtime (decision engine + research baseline)
 numpy>=1.26
 pandas>=2.0
 scikit-learn>=1.4
-# optional research
+
+# Paper quotes when Kite Personal has no LTP
+yfinance>=0.2.40
+
+# Tests
+pytest>=8.0
+
+# OpenAlgo SDK — install on the box that talks to the host
+# openalgo>=1.0
+
+# TODO(training): enable after real quality holds exist
 # lightgbm>=4.0
 # optuna>=3.0
-# openalgo>=1.0
+# mlfinlab  # if licensed; patterns are already inlined in src/meta_label/

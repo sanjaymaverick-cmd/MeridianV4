@@ -34,7 +34,9 @@ research/runtime/KILL
 .ipynb_checkpoints/
 
 # Secrets
-.env*
+.env
+.env.*
+!.env.example
 secrets/
 *.pem
 api_keys*
