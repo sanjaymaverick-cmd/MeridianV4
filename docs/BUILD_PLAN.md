@@ -1,7 +1,7 @@
 # Meridian V4 – Build Master Spec
 
 **Last updated:** 15 Aug 2026  
-**Status:** Active build – M1 complete  
+**Status:** Active build – M2 complete (synth scaffolding)  
 **Location:** `/home/workdir/artifacts` (temporary; V4 will move to separate repo provided by user)
 
 ---
@@ -67,7 +67,7 @@ OpenAlgo (production)
 
 ## 4. Build Milestones (Optimized)
 
-**M0 – Master Spec** ← *Current*  
+**M0 – Master Spec**  
 This document.  
 
 **M1 – Data Pipeline**  
@@ -125,9 +125,10 @@ Futures marks, exit_reason completeness, cooldown, longer-hold redesign foundati
 
 | Milestone | Status | Key Outputs |
 |-----------|--------|-------------|
-| M0 Master Spec | Done | `Meridian_V4_Build_README.md` |
+| M0 Master Spec | Done | `BUILD_PLAN.md`, `README.md` |
 | M1 Data Pipeline | Done | `build_meta_labels_v4.py`, `meridian_v4_meta_labels.csv/.db`, `M1_validation_report.md` |
-| M2 Research Baseline | Next | mlfinlab-style triple-barrier + purged CV on clean 157 rows |
+| M2 Research Baseline | Done | TBM + purged/CPCV, `meta_label_v4.json`, `docs/M2_RESEARCH.md` |
+| M3 Decision Engine | Next | Harden `src/decision/engine.py` |
 
 **M1 Results (clean subset):** 157 clean rows | 16 quality holds (≥300s) | 173 short holds | Contaminated futures fully flagged and excluded from clean set.
 
@@ -135,7 +136,7 @@ Futures marks, exit_reason completeness, cooldown, longer-hold redesign foundati
 
 ## 8. Next Action
 
-Proceed to **M2 – Research Baseline** (full mlfinlab-style meta-label pipeline on the clean subset).
+Proceed to **M3 – Decision Engine** (meta_prob from artefact, longer-hold manage, hard gates).
 
 ---
 

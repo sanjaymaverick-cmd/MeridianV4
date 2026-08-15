@@ -1,0 +1,7 @@
+numpy>=1.26
+pandas>=2.0
+scikit-learn>=1.4
+# optional research
+# lightgbm>=4.0
+# optuna>=3.0
+# openalgo>=1.0

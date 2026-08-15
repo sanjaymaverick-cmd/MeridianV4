@@ -29,15 +29,13 @@ Meridian V4 is the next generation of the Meridian trading system.
 ```
 MeridianV4/
 ├── README.md
-├── docs/
-│   ├── BUILD_PLAN.md              # Master build plan & decisions
-│   └── M1_validation_report.md    # Data pipeline validation
-├── data/
-│   └── meta_labels/               # Cleaned V4 training sets
-├── src/
-│   └── meta_label/                # Meta-label builders & pipelines
-├── research/                      # Notebooks & experiments (M2+)
-└── scripts/                       # Utility scripts
+├── docs/                          # BUILD_PLAN + milestone reports
+├── data/meta_labels/              # Clean + synth + TBM-labeled sets
+├── src/meta_label/                # TBM, purged CV, builders
+├── src/decision/                  # Thin pure-Python engine (M3)
+├── src/openalgo/                  # Hosted strategy wrapper (M4)
+├── research/                      # Ledger + JSON model artefact
+└── tests/
 ```
 
 ---
@@ -48,8 +46,8 @@ MeridianV4/
 |-----------|--------|-------|
 | M0 – Master Spec | Done | This repo + BUILD_PLAN.md |
 | M1 – Data Pipeline | Done | Clean 157-row set, longer-hold flags, contamination handling |
-| M2 – Research Baseline | Next | mlfinlab triple-barrier + purged CV |
-| M3 – Decision Engine | Pending | Pure Python engine |
+| M2 – Research Baseline | Done | TBM +1R/−1R, uniqueness, purged/CPCV. Artefact JSON. Synth only. |
+| M3 – Decision Engine | Next | Consume meta_prob; longer-hold manage() |
 | M4 – OpenAlgo Paper | Pending | Hosted strategy + closed-loop learning |
 | M5 – Automation Gates | Pending | Retrain + promotion rules |
 | M6 – Live | Pending | Small capital → production |
@@ -65,10 +63,14 @@ data/meta_labels/meridian_v4_meta_labels.db
 
 # Rebuild / refresh
 python src/meta_label/build_meta_labels_v4.py
+
+# M2: TBM labels + purged CV + artefact
+python src/meta_label/m2_research_baseline.py
 ```
 
 **Important:** Always filter with `is_clean == 1` before any model training.  
-Futures contamination is fully flagged and excluded from the clean set.
+Futures contamination is fully flagged and excluded from the clean set.  
+`is_synthetic == 1` is scaffolding — not promotion-eligible.
 
 ---
 
@@ -83,7 +85,7 @@ Futures contamination is fully flagged and excluded from the clean set.
 
 ## Next
 
-Proceed to **M2 – Research Baseline** (mlfinlab-style meta-label pipeline on the clean 157 rows).
+Proceed to **M3 – Decision Engine** (consume `meta_label_v4.json`, longer-hold exits).
 
 ---
 
