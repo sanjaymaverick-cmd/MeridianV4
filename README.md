@@ -51,7 +51,7 @@ MeridianV4/
 | M3 – Decision Engine | Done | meta_prob from JSON; longer-hold manage(); hard gates |
 | M4 – OpenAlgo Paper | Done | Quote poll + causal primary + paper/dry loop. Analyzer-ready. |
 | M5 – Automation Gates | Done | Retrain + real-only gates + registry. Current real fails (expected). |
-| M6 – Live | Pending | Small capital → production |
+| M6 – Live | Gated | Code ready. Blocked until M5 gates pass. See `docs/M6_PRELIVE.md`. |
 
 ---
 
@@ -92,7 +92,7 @@ Futures contamination is fully flagged and excluded from the clean set.
 
 ## Next
 
-Next: paper fills with longer holds, then re-run `retrain.py --promote`. M6 live only after gates pass.
+**You do next:** run paper (`scripts/paper_loop.ps1`) until gates pass, then `docs/M6_PRELIVE.md`. Software stack M0–M6 is in-repo.
 
 ---
 

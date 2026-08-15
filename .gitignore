@@ -22,6 +22,9 @@ checkpoints/
 *.pkl
 *.h5
 research/artefacts/candidates/*.json
+research/runtime/state.json
+research/runtime/KILL
+*.json.bak
 
 # IDE / OS
 .idea/

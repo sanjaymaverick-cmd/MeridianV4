@@ -35,7 +35,25 @@ def register(path: Path, status: str, metrics: dict, gates: dict) -> dict:
 def promote(candidate: Path, live: Path | None = None) -> Path:
     dest = Path(live) if live else LIVE
     dest.parent.mkdir(parents=True, exist_ok=True)
+    if dest.exists():
+        shutil.copy2(dest, dest.with_suffix(".json.bak"))
     shutil.copy2(candidate, dest)
+    return dest
+
+
+def rollback(live: Path | None = None) -> Path:
+    dest = Path(live) if live else LIVE
+    bak = dest.with_suffix(".json.bak")
+    if not bak.exists():
+        raise FileNotFoundError(f"no backup at {bak}")
+    shutil.copy2(bak, dest)
+    _write({
+        "ts": datetime.now(timezone.utc).isoformat(),
+        "status": "rollback",
+        "path": str(dest).replace("\\", "/"),
+        "metrics": {},
+        "gates": {"passed": False, "reason": "manual_rollback"},
+    })
     return dest
 
 

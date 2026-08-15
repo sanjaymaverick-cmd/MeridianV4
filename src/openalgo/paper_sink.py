@@ -21,8 +21,17 @@ FIELDS = [
     "y_binary", "honest_pnl", "y_R", "hold_sec", "symbol", "signal_id",
     "buy_time", "sell_time", "buy_price", "sell_price", "fees", "atr_source",
     "model_version", "feature_hash", "regime_id", "meta_prob",
-    "portfolio_heat_at_entry", "is_synthetic",
+    "portfolio_heat_at_entry", "is_synthetic", "exit_reason",
 ]
+
+
+def _fieldnames(dest: Path) -> list[str]:
+    if dest.exists() and dest.stat().st_size > 0:
+        with open(dest, encoding="utf-8", newline="") as f:
+            row = next(csv.reader(f), None)
+        if row:
+            return row
+    return FIELDS
 
 
 def _bucket(hold: float) -> str:
@@ -87,6 +96,7 @@ def close_to_row(fill: Mapping) -> dict:
         "meta_prob": fill.get("meta_prob", ""),
         "portfolio_heat_at_entry": fill.get("portfolio_heat_at_entry", ""),
         "is_synthetic": 0,
+        "exit_reason": fill.get("exit_reason", ""),
     }
 
 
@@ -94,9 +104,10 @@ def append_close(fill: Mapping, path: Path | None = None) -> Path:
     dest = Path(path) if path else DEFAULT_CSV
     dest.parent.mkdir(parents=True, exist_ok=True)
     row = close_to_row(fill)
-    new = not dest.exists()
+    new = not dest.exists() or dest.stat().st_size == 0
+    names = FIELDS if new else _fieldnames(dest)
     with open(dest, "a", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=FIELDS, extrasaction="ignore")
+        w = csv.DictWriter(f, fieldnames=names, extrasaction="ignore")
         if new:
             w.writeheader()
         w.writerow(row)

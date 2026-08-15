@@ -23,5 +23,10 @@
 - Gates fail on current real: quality 16/25, y_meta+ 2/15, no real purged AUC
 - Registry: `research/registry/index.jsonl`
 
-## Blocker
-Real clean still ~2 TBM+ / 16 quality holds. Paper longer-holds required before `--promote`.
+## M6 – Live  GATED
+- Kill / daily loss / live 10% cap / max 2 names / ₹25k
+- State persist + cooldown + Analyzer preflight
+- Checklist: `docs/M6_PRELIVE.md`
+
+## Blocker (human)
+Real clean still ~2 TBM+ / 16 quality holds. Run paper, then `--promote`. Do not live.

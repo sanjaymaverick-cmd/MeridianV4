@@ -28,3 +28,10 @@ python src/automation/retrain.py --no-synth --promote
 **Current real set fails** (16 quality, ~1 TBM+). Expected. Do not `--force` for live.
 
 Train may use synth; **promotion metrics cannot**.
+
+```
+python src/automation/gates.py          # exit 0 only if last registry eval passed
+python -c "import sys; sys.path.insert(0,'src/automation'); from registry import rollback; rollback()"
+```
+
+Task Scheduler: `scripts/retrain_daily.ps1` after close. Paper: `scripts/paper_loop.ps1`.

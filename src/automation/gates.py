@@ -61,3 +61,31 @@ def evaluate(m: dict) -> GateReport:
     passed = not failed
     reason = "ok" if passed else "fail:" + ",".join(failed)
     return GateReport(passed, checks, reason)
+
+
+def latest_from_registry() -> GateReport | None:
+    from pathlib import Path
+    import json
+    idx = Path(__file__).resolve().parents[2] / "research" / "registry" / "index.jsonl"
+    if not idx.exists():
+        return None
+    last = None
+    for line in idx.read_text(encoding="utf-8").splitlines():
+        if line.strip():
+            last = json.loads(line)
+    if not last:
+        return None
+    g = last.get("gates") or {}
+    if "checks" in g:
+        return evaluate(last.get("metrics") or {})
+    return evaluate(last.get("metrics") or {})
+
+
+if __name__ == "__main__":
+    import json
+    r = latest_from_registry()
+    if r is None:
+        print("no registry entries")
+    else:
+        print(json.dumps(r.as_dict(), indent=2))
+        raise SystemExit(0 if r.passed else 1)

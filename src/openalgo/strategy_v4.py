@@ -21,18 +21,36 @@ sys.path.insert(0, str(ROOT / "src" / "decision"))
 sys.path.insert(0, str(ROOT / "src" / "meta_label"))
 sys.path.insert(0, str(ROOT / "src" / "openalgo"))
 
-from engine import Intent, Position, Signal, decide, manage  # noqa: E402
+from broker import (  # noqa: E402
+    atr_pct_from_history,
+    ensure_analyzer,
+    notify,
+    refuse_live_if_analyzer,
+)
+from engine import (  # noqa: E402
+    LIVE_BUDGET,
+    PAPER_BUDGET,
+    Intent,
+    Position,
+    RiskState,
+    Signal,
+    decide,
+    manage,
+)
 from paper_sink import append_close  # noqa: E402
 from predict import load_artefact  # noqa: E402
 from primary import signal_from_quote  # noqa: E402
 from quotes import DryFeed, OpenAlgoFeed, Quote, QuoteFeed  # noqa: E402
 from session import nse_open  # noqa: E402
+from state import dump as dump_state, killed, load as load_state  # noqa: E402
 
 MODE = os.environ.get("MERIDIAN_MODE", "dry").lower()
 HOST = os.environ.get("OPENALGO_HOST", "http://127.0.0.1:5000")
 WEBHOOK = os.environ.get("OPENALGO_WEBHOOK_ID", "")
 API_KEY = os.environ.get("OPENALGO_API_KEY", "")
+OA_USER = os.environ.get("OPENALGO_USERNAME", "")
 STRATEGY_NAME = "MeridianV4"
+LIVE_OK = os.environ.get("MERIDIAN_LIVE_OK", "0") == "1"
 POLL_SEC = float(os.environ.get("MERIDIAN_POLL_SEC", "30"))
 WATCH = [s.strip() for s in os.environ.get(
     "MERIDIAN_SYMBOLS", "INFY,HCLTECH,RELIANCE,TCS,BNBUSDT"
@@ -69,7 +87,10 @@ def _quote_feed() -> QuoteFeed:
     return OpenAlgoFeed(api(api_key=API_KEY, host=HOST))
 
 
-def _qty(price: float, size_pct: float, budget: float = 100_000.0) -> float:
+def _qty(price: float, size_pct: float, budget: float | None = None) -> float:
+    budget = PAPER_BUDGET if budget is None else budget
+    if MODE == "live":
+        budget = LIVE_BUDGET
     risk = max(budget * size_pct, 0.0)
     if price <= 0:
         return 0.0
@@ -77,17 +98,42 @@ def _qty(price: float, size_pct: float, budget: float = 100_000.0) -> float:
     return max(1.0, round(q, 1)) if price < 5000 else max(0.01, round(q, 4))
 
 
+def preflight(client) -> None:
+    if MODE == "live":
+        if not LIVE_OK:
+            raise RuntimeError("live refused: set MERIDIAN_LIVE_OK=1 after M5 gates pass")
+        if killed():
+            raise RuntimeError("live refused: research/runtime/KILL present")
+        refuse_live_if_analyzer(client)
+    elif MODE == "paper" and client is not None:
+        ensure_analyzer(client, True)
+
+
 class Host:
-    def __init__(self, persist: bool = True, sink: Path | None = None):
+    def __init__(self, persist: bool = True, sink: Path | None = None, restore: bool = False):
         self.art = load_artefact()
         self.kind, self.client = _order_client()
-        self.pos: dict[str, Position] = {}
-        self.heat = 0.0
         self.persist = persist
         self.sink = sink
+        self.risk = RiskState(live=(MODE == "live"), killed=killed())
+        self.pos: dict[str, Position] = {}
+        self.heat = 0.0
+        if restore:
+            self.pos, self.risk = load_state()
+            self.risk.live = MODE == "live"
+            self.risk.killed = self.risk.killed or killed()
+            self.heat = sum(p.size_pct for p in self.pos.values())
+            self.risk.n_open = len(self.pos)
+        if MODE in ("paper", "live"):
+            preflight(self.client)
+
+    def _save(self) -> None:
+        if self.persist and MODE != "dry":
+            dump_state(self.pos, self.risk)
 
     def _send(self, symbol: str, action: str, qty: float) -> None:
         print(f"{MODE} {action} {symbol} qty={qty}")
+        notify(self.client, OA_USER, f"MeridianV4 {MODE} {action} {symbol} x{qty}")
         if self.client is None:
             return
         if self.kind == "api":
@@ -102,6 +148,8 @@ class Host:
 
     def on_signal(self, sig: Signal, last_price: float, now: Optional[datetime] = None) -> Intent:
         now = now or datetime.now(timezone.utc)
+        self.risk.killed = self.risk.killed or killed()
+        self.risk.n_open = len(self.pos)
         sym = sig.symbol
         sig.portfolio_heat = self.heat
 
@@ -114,6 +162,10 @@ class Host:
                 self.heat = max(0.0, self.heat - pos.size_pct)
                 hold = (now - pos.entry_ts).total_seconds()
                 pnl = (last_price - pos.entry_price) * qty
+                self.risk.daily_pnl += pnl
+                self.risk.n_open = len(self.pos)
+                if intent.reason in ("hard_stop", "trail"):
+                    self.risk.arm_cooldown(sym, now)
                 if self.persist:
                     append_close({
                         "symbol": sym,
@@ -135,11 +187,13 @@ class Host:
                         "minutes_since_midnight": sig.minutes_since_midnight,
                         "belief_posterior": sig.belief_posterior,
                         "portfolio_heat_at_entry": self.heat,
-                        "model_version": "v4_paper",
+                        "model_version": f"v4_{MODE}",
+                        "exit_reason": intent.reason,
                     }, self.sink)
+                self._save()
             return intent
 
-        intent = decide(sig, self.art)
+        intent = decide(sig, self.art, self.risk, now)
         if intent.action == "BUY":
             qty = _qty(last_price, intent.size_pct)
             self._send(sym, "BUY", qty)
@@ -149,6 +203,8 @@ class Host:
                 meta_prob=intent.meta_prob, high_since_entry=last_price, qty=qty,
             )
             self.heat = min(1.0, self.heat + intent.size_pct)
+            self.risk.n_open = len(self.pos)
+            self._save()
         return intent
 
 
@@ -169,13 +225,18 @@ def poll_once(
         if q.exchange == "NSE" and not nse_open(now) and MODE != "dry":
             continue
         sig = signal_from_quote(q, now)
+        if MODE != "dry" and host.kind == "api":
+            ap = atr_pct_from_history(host.client, q.symbol, q.exchange)
+            if ap:
+                sig.atr_pct = ap
+                sig.approx_stop_pct = 1.5 * ap
         intents.append(host.on_signal(sig, q.ltp, now))
     return intents
 
 
 def run(max_ticks: Optional[int] = None, interval: Optional[float] = None,
         feed: Optional[QuoteFeed] = None) -> None:
-    host = Host(persist=(MODE != "dry"))
+    host = Host(persist=(MODE != "dry"), restore=(MODE != "dry"))
     feed = feed or _quote_feed()
     n, gap = 0, interval if interval is not None else POLL_SEC
     while True:

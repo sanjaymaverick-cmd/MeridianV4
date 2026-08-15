@@ -12,6 +12,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
+KILL_NAME = "KILL"
+
 _ML = Path(__file__).resolve().parents[1] / "meta_label"
 if str(_ML) not in sys.path:
     sys.path.insert(0, str(_ML))
@@ -30,6 +32,32 @@ TRAIL_GIVEBACK_R = 0.4
 EOD_FLATTEN_MIN = 15
 STOP_ATR_MULT = 1.5
 STOP_PCT_MIN, STOP_PCT_MAX = 0.008, 0.04
+COOLDOWN_SEC = 600
+DAILY_LOSS_LIMIT = -5000.0   # ₹
+MAX_SIZE_LIVE = 0.10
+MAX_POS_PAPER = 3
+MAX_POS_LIVE = 2
+LIVE_BUDGET = 25_000.0
+PAPER_BUDGET = 100_000.0
+
+
+@dataclass
+class RiskState:
+    daily_pnl: float = 0.0
+    daily_loss_limit: float = DAILY_LOSS_LIMIT
+    killed: bool = False
+    cooldown_until: dict = field(default_factory=dict)
+    cooldown_sec: float = COOLDOWN_SEC
+    live: bool = False
+    n_open: int = 0
+
+    def in_cooldown(self, symbol: str, now: datetime) -> bool:
+        until = self.cooldown_until.get(symbol)
+        return until is not None and now < until
+
+    def arm_cooldown(self, symbol: str, now: datetime) -> None:
+        from datetime import timedelta
+        self.cooldown_until[symbol] = now + timedelta(seconds=self.cooldown_sec)
 
 
 @dataclass
@@ -98,7 +126,20 @@ def score(sig: Signal, art: Optional[dict] = None) -> float:
     )
 
 
-def decide(sig: Signal, art: Optional[dict] = None) -> Intent:
+def decide(sig: Signal, art: Optional[dict] = None,
+           risk: Optional[RiskState] = None,
+           now: Optional[datetime] = None) -> Intent:
+    now = now or datetime.now(timezone.utc)
+    risk = risk or RiskState()
+    if risk.killed:
+        return Intent("FLAT", 0.0, 0.0, "kill_switch")
+    if risk.daily_pnl <= risk.daily_loss_limit:
+        return Intent("FLAT", 0.0, 0.0, "daily_loss")
+    if risk.in_cooldown(sig.symbol, now):
+        return Intent("FLAT", 0.0, 0.0, "cooldown")
+    cap = MAX_POS_LIVE if risk.live else MAX_POS_PAPER
+    if risk.n_open >= cap:
+        return Intent("FLAT", 0.0, 0.0, "max_positions")
     if sig.minutes_to_eod < MAX_MINUTES_TO_EOD:
         return Intent("FLAT", 0.0, 0.0, "too_close_to_eod")
     if sig.portfolio_heat >= MAX_HEAT:
@@ -110,7 +151,8 @@ def decide(sig: Signal, art: Optional[dict] = None) -> Intent:
         return Intent("FLAT", 0.0, 0.0, "low_meta_prob", meta_prob=p)
 
     edge = p - 0.5
-    size = max(0.0, min(MAX_SIZE, edge * 1.5 * (1.0 - sig.portfolio_heat)))
+    size_cap = MAX_SIZE_LIVE if risk.live else MAX_SIZE
+    size = max(0.0, min(size_cap, edge * 1.5 * (1.0 - sig.portfolio_heat)))
     if size <= 0.0:
         return Intent("FLAT", 0.0, 0.0, "zero_size", meta_prob=p)
     stop = max(STOP_PCT_MIN, min(STOP_PCT_MAX, STOP_ATR_MULT * sig.atr_pct))

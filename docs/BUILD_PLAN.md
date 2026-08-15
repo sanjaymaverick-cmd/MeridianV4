@@ -1,7 +1,7 @@
 # Meridian V4 – Build Master Spec
 
 **Last updated:** 15 Aug 2026  
-**Status:** Active build – M5 gates live (promotion blocked until real quality holds)  
+**Status:** Code complete M0–M6. Promotion + live blocked on real quality holds.  
 **Location:** `/home/workdir/artifacts` (temporary; V4 will move to separate repo provided by user)
 
 ---
@@ -130,7 +130,8 @@ Futures marks, exit_reason completeness, cooldown, longer-hold redesign foundati
 | M2 Research Baseline | Done | TBM + purged/CPCV, `meta_label_v4.json`, `docs/M2_RESEARCH.md` |
 | M3 Decision Engine | Done | `src/decision/engine.py`, `docs/M3_ENGINE.md` |
 | M4 OpenAlgo Paper | Done | Quote poll, causal primary, paper_sink. |
-| M5 Automation Gates | Done | `retrain.py` + `gates.py` + `registry.py`. Synth cannot promote. |
+| M5 Automation Gates | Done | Retrain, gates CLI, registry + rollback, nightly script. |
+| M6 Live | Gated | Kill switch, daily loss, live caps, `docs/M6_PRELIVE.md`. |
 
 **M1 Results (clean subset):** 157 clean rows | 16 quality holds (≥300s) | 173 short holds | Contaminated futures fully flagged and excluded from clean set.
 
@@ -138,7 +139,7 @@ Futures marks, exit_reason completeness, cooldown, longer-hold redesign foundati
 
 ## 8. Next Action
 
-Collect real longer-hold paper fills, then `python src/automation/retrain.py --promote`. M6 only after gates pass.
+Human path: paper fills via `scripts/paper_loop.ps1` → `retrain.py --promote` → `docs/M6_PRELIVE.md`.
 
 ---
 

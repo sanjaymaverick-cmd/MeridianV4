@@ -16,12 +16,16 @@ import pandas as pd
 import sqlite3
 from datetime import datetime, timezone
 
-ARTIFACTS = Path("/home/workdir/artifacts")
-SRC_CSV = ARTIFACTS / "meridian_v3_meta_labels.csv"
-SRC_DB = ARTIFACTS / "meridian_v3_with_meta_labels.db"
-OUT_CSV = ARTIFACTS / "meridian_v4_meta_labels.csv"
-OUT_DB = ARTIFACTS / "meridian_v4_meta_labels.db"
-VAL_REPORT = ARTIFACTS / "M1_validation_report.md"
+ROOT = Path(__file__).resolve().parents[2]
+DATA = ROOT / "data" / "meta_labels"
+DOCS = ROOT / "docs"
+# Optional V3 *copy* only — never write V3 paths
+SRC_CSV = DATA / "meridian_v3_meta_labels.csv"
+SRC_DB = DATA / "meridian_v3_with_meta_labels.db"
+OUT_CSV = DATA / "meridian_v4_meta_labels.csv"
+OUT_DB = DATA / "meridian_v4_meta_labels.db"
+VAL_REPORT = DOCS / "M1_validation_report.md"
+COOLDOWN_SEC = 600
 
 # Thresholds for longer-hold redesign (decision locked)
 SHORT_HOLD_SEC = 120          # still flag as short
@@ -32,13 +36,19 @@ FUTURES_SYMBOLS = {"NIFTY.F", "INFY.F", "BANKNIFTY.F", "NIFTY.C", "BANKNIFTY.C"}
 def load_v3() -> pd.DataFrame:
     if SRC_CSV.exists():
         df = pd.read_csv(SRC_CSV, parse_dates=["buy_time", "sell_time"])
-        print(f"Loaded {len(df)} rows from CSV")
+        print(f"Loaded {len(df)} rows from V3 copy CSV")
         return df
-    conn = sqlite3.connect(SRC_DB)
-    df = pd.read_sql("SELECT * FROM meta_label_training", conn, parse_dates=["buy_time", "sell_time"])
-    conn.close()
-    print(f"Loaded {len(df)} rows from DB")
-    return df
+    if SRC_DB.exists():
+        conn = sqlite3.connect(SRC_DB)
+        df = pd.read_sql("SELECT * FROM meta_label_training", conn, parse_dates=["buy_time", "sell_time"])
+        conn.close()
+        print(f"Loaded {len(df)} rows from V3 copy DB")
+        return df
+    if OUT_CSV.exists():
+        df = pd.read_csv(OUT_CSV, parse_dates=["buy_time", "sell_time"])
+        print(f"Re-flag existing V4 CSV ({len(df)} rows)")
+        return df
+    raise FileNotFoundError(f"No V3 copy and no V4 csv under {DATA}")
 
 
 def add_v4_columns(df: pd.DataFrame) -> pd.DataFrame:
@@ -86,6 +96,13 @@ def add_v4_columns(df: pd.DataFrame) -> pd.DataFrame:
     df["regime_id"] = 0          # will be filled by regime model later
     df["meta_prob"] = np.nan     # filled after model inference
     df["portfolio_heat_at_entry"] = np.nan
+    if "exit_reason" not in df.columns:
+        df["exit_reason"] = df["exit_quality"]
+    # per-symbol cooldown vs previous sell
+    df = df.sort_values(["symbol", "buy_time"])
+    prev_sell = df.groupby("symbol")["sell_time"].shift(1)
+    gap = (pd.to_datetime(df["buy_time"]) - pd.to_datetime(prev_sell)).dt.total_seconds()
+    df["cooldown_ok"] = (gap.isna() | (gap >= COOLDOWN_SEC)).astype(int)
 
     # Keep original y_binary / y_R / honest_pnl untouched (honest accounting)
     return df
@@ -169,6 +186,7 @@ def main():
     flags = [
         "is_futures", "is_contaminated_futures", "is_clean",
         "is_short_hold", "is_quality_hold", "hold_bucket", "exit_quality",
+        "exit_reason", "cooldown_ok",
     ]
     labels = ["y_binary", "honest_pnl", "y_R", "hold_sec"]
     meta = [

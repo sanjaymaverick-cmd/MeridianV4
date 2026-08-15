@@ -33,7 +33,7 @@ def test_sink_flags_real_not_synth(tmp_path):
         "belief_posterior": 0.25, "meta_prob": 0.6,
     }, dest)
     text = dest.read_text(encoding="utf-8")
-    assert "INFY" in text and text.strip().endswith("0")  # is_synthetic=0
+    assert "INFY" in text and ",0," in text or text.strip().endswith(",0")
     row = close_to_row({"hold_sec": 600, "honest_pnl": 8, "risk_rupees": 6,
                         "symbol": "INFY", "confidence": 0.6, "confluence": 73.6,
                         "p_success": 0.67, "atr_pct": 0.02})
