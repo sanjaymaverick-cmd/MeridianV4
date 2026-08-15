@@ -13,5 +13,10 @@
 - `decide()` + `manage()` (min hold 300s, hard stop, TP 1.5R, trail).
 - Tests: `tests/test_m3_engine.py`
 
+## M4 – OpenAlgo wrapper  SKELETON
+- `src/openalgo/strategy_v4.py` dry/paper Host
+- `src/openalgo/paper_sink.py` appends closes (`is_synthetic=0`)
+- Missing: live quote poll / Historify
+
 ## Blocker
 Real clean still ~1 positive. Paper longer-holds required before live promotion.

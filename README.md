@@ -48,7 +48,7 @@ MeridianV4/
 | M1 – Data Pipeline | Done | Clean 157-row set, longer-hold flags, contamination handling |
 | M2 – Research Baseline | Done | TBM +1R/−1R, uniqueness, purged/CPCV. Artefact JSON. Synth only. |
 | M3 – Decision Engine | Done | meta_prob from JSON; longer-hold manage(); hard gates |
-| M4 – OpenAlgo Paper | Pending | Hosted strategy + closed-loop learning |
+| M4 – OpenAlgo Paper | Skeleton | `strategy_v4.py` dry/paper + paper_sink. Quote poll TBD. |
 | M5 – Automation Gates | Pending | Retrain + promotion rules |
 | M6 – Live | Pending | Small capital → production |
 
@@ -85,7 +85,7 @@ Futures contamination is fully flagged and excluded from the clean set.
 
 ## Next
 
-Proceed to **M4 – OpenAlgo paper wrapper**.
+Proceed to **M4 quote loop** (Historify/OpenAlgo quotes) then **M5 gates**.
 
 ---
 
