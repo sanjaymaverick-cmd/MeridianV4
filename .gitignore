@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+.env
+*.egg-info/
+dist/
+build/
+
+# Data & models (large / sensitive)
+*.db-shm
+*.db-wal
+*.parquet
+models/
+checkpoints/
+*.joblib
+*.pkl
+*.h5
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+*.swp
+.ipynb_checkpoints/
+
+# Secrets
+.env*
+secrets/
+*.pem
+api_keys*
+
+# Logs & temp
+logs/
+tmp/
+*.log
+.cache/
