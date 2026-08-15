@@ -33,8 +33,9 @@ MeridianV4/
 ├── data/meta_labels/              # Clean + synth + TBM-labeled sets
 ├── src/meta_label/                # TBM, purged CV, builders
 ├── src/decision/                  # Thin pure-Python engine (M3)
-├── src/openalgo/                  # Hosted strategy wrapper (M4)
-├── research/                      # Ledger + JSON model artefact
+├── src/openalgo/                  # Hosted strategy + quote loop (M4)
+├── src/automation/                # Retrain, gates, registry (M5)
+├── research/                      # Ledger + artefact + registry
 └── tests/
 ```
 
@@ -49,7 +50,7 @@ MeridianV4/
 | M2 – Research Baseline | Done | TBM +1R/−1R, uniqueness, purged/CPCV. Artefact JSON. Synth only. |
 | M3 – Decision Engine | Done | meta_prob from JSON; longer-hold manage(); hard gates |
 | M4 – OpenAlgo Paper | Done | Quote poll + causal primary + paper/dry loop. Analyzer-ready. |
-| M5 – Automation Gates | Pending | Retrain + promotion rules |
+| M5 – Automation Gates | Done | Retrain + real-only gates + registry. Current real fails (expected). |
 | M6 – Live | Pending | Small capital → production |
 
 ---
@@ -66,6 +67,12 @@ python src/meta_label/build_meta_labels_v4.py
 
 # M2: TBM labels + purged CV + artefact
 python src/meta_label/m2_research_baseline.py
+
+# M4 dry
+python src/openalgo/strategy_v4.py
+
+# M5 retrain (candidate only; will not promote on current real)
+python src/automation/retrain.py
 ```
 
 **Important:** Always filter with `is_clean == 1` before any model training.  
@@ -85,7 +92,7 @@ Futures contamination is fully flagged and excluded from the clean set.
 
 ## Next
 
-Proceed to **M5** retrain + promotion gates + model registry.
+Next: paper fills with longer holds, then re-run `retrain.py --promote`. M6 live only after gates pass.
 
 ---
 

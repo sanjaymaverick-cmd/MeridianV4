@@ -18,5 +18,10 @@
 - `poll_once` / `run` in `strategy_v4.py`
 - paper_sink on SELL (`is_synthetic=0`)
 
+## M5 – Automation  DONE (promotion blocked)
+- `src/automation/retrain.py` writes candidates only
+- Gates fail on current real: quality 16/25, y_meta+ 2/15, no real purged AUC
+- Registry: `research/registry/index.jsonl`
+
 ## Blocker
-Real clean still ~1 positive. Paper longer-holds required before live promotion.
+Real clean still ~2 TBM+ / 16 quality holds. Paper longer-holds required before `--promote`.

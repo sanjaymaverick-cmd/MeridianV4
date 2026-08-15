@@ -88,7 +88,7 @@ def eval_splits(X, y, w, splits) -> list[dict]:
     return rows
 
 
-def fit_export(X, y, w) -> dict:
+def fit_export(X, y, w, dest: Path | None = None, version: str = "m2_tbm_v1") -> dict:
     sc = StandardScaler()
     Xs = sc.fit_transform(X)
     clf = LogisticRegression(max_iter=800, class_weight="balanced", random_state=42)
@@ -96,7 +96,7 @@ def fit_export(X, y, w) -> dict:
     proba = clf.predict_proba(Xs)[:, 1]
     art = {
         "model": "LogisticRegression",
-        "version": "m2_tbm_v1",
+        "version": version,
         "ts": datetime.now(timezone.utc).isoformat(),
         "features": FEATURES,
         "scaler_mean": sc.mean_.astype(float).tolist(),
@@ -113,8 +113,10 @@ def fit_export(X, y, w) -> dict:
         },
         "note": "Scaffolding. Do not promote on synth-only metrics.",
     }
-    ARTEFACT_DIR.mkdir(parents=True, exist_ok=True)
-    ARTEFACT.write_text(json.dumps(art, indent=2), encoding="utf-8")
+    out = Path(dest) if dest else ARTEFACT
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(art, indent=2), encoding="utf-8")
+    art["path"] = str(out)
     return art
 
 

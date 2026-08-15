@@ -21,6 +21,7 @@ checkpoints/
 *.joblib
 *.pkl
 *.h5
+research/artefacts/candidates/*.json
 
 # IDE / OS
 .idea/
