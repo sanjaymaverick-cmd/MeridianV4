@@ -1,0 +1,68 @@
+"""Backfill universes. NSE via jugaad-data; BSE/crypto/forex via yfinance."""
+
+# Nifty 50 + Meridian watch extras (BRITANNIA)
+NSE_EQ = [
+    "ADANIENT", "ADANIPORTS", "APOLLOHOSP", "ASIANPAINT", "AXISBANK",
+    "BAJAJ-AUTO", "BAJFINANCE", "BAJAJFINSV", "BEL", "BHARTIARTL",
+    "BRITANNIA", "CIPLA", "COALINDIA", "DRREDDY", "EICHERMOT",
+    "ETERNAL", "GRASIM", "HCLTECH", "HDFCBANK", "HDFCLIFE",
+    "HEROMOTOCO", "HINDALCO", "HINDUNILVR", "ICICIBANK", "INDUSINDBK",
+    "INFY", "ITC", "JIOFIN", "JSWSTEEL", "KOTAKBANK",
+    "LT", "M&M", "MARUTI", "NESTLEIND", "NTPC",
+    "ONGC", "POWERGRID", "RELIANCE", "SBILIFE", "SBIN",
+    "SHRIRAMFIN", "SUNPHARMA", "TATACONSUM", "TATAMOTORS", "TATASTEEL",
+    "TCS", "TECHM", "TITAN", "TRENT", "ULTRACEMCO", "WIPRO",
+]
+
+NSE_INDEX = [
+    "NIFTY 50",
+    "NIFTY BANK",
+    "NIFTY IT",
+    "NIFTY FINANCIAL SERVICES",
+    "NIFTY MIDCAP 50",
+    "NIFTY NEXT 50",
+]
+
+# Sensex 30 — yfinance .BO
+BSE_EQ = [
+    "ADANIPORTS", "ASIANPAINT", "AXISBANK", "BAJAJ-AUTO", "BAJFINANCE",
+    "BAJAJFINSV", "BHARTIARTL", "HCLTECH", "HDFCBANK", "HINDUNILVR",
+    "ICICIBANK", "INDUSINDBK", "INFY", "ITC", "KOTAKBANK",
+    "LT", "M&M", "MARUTI", "NESTLEIND", "NTPC",
+    "POWERGRID", "RELIANCE", "SBIN", "SUNPHARMA", "TATAMOTORS",
+    "TATASTEEL", "TCS", "TECHM", "TITAN", "ULTRACEMCO",
+]
+
+BSE_INDEX = [
+    ("SENSEX", "^BSESN"),
+]
+
+# Yahoo tickers for 5y daily. OpenAlgo/Delta symbols in CRYPTO_OA.
+CRYPTO = [
+    "BTC-USD", "ETH-USD", "BNB-USD", "SOL-USD", "XRP-USD",
+    "DOGE-USD", "ADA-USD", "AVAX-USD", "DOT-USD", "LINK-USD",
+    "LTC-USD", "BCH-USD", "UNI-USD", "ATOM-USD", "NEAR-USD",
+    "APT-USD", "SUI-USD", "TON-USD", "TRX-USD", "XLM-USD",
+]
+
+# Meridian symbol → (exchange, yfinance ticker). Delta USDT perps.
+CRYPTO_OA = {
+    "BTCUSDT": ("DELTA", "BTC-USD"),
+    "ETHUSDT": ("DELTA", "ETH-USD"),
+    "BNBUSDT": ("DELTA", "BNB-USD"),
+    "SOLUSDT": ("DELTA", "SOL-USD"),
+    "XRPUSDT": ("DELTA", "XRP-USD"),
+    "DOGEUSDT": ("DELTA", "DOGE-USD"),
+    "ADAUSDT": ("DELTA", "ADA-USD"),
+    "AVAXUSDT": ("DELTA", "AVAX-USD"),
+    "DOTUSDT": ("DELTA", "DOT-USD"),
+    "LINKUSDT": ("DELTA", "LINK-USD"),
+    "LTCUSDT": ("DELTA", "LTC-USD"),
+    "UNIUSDT": ("DELTA", "UNI-USD"),
+}
+
+FOREX = [
+    "USDINR=X", "EURINR=X", "GBPINR=X", "JPYINR=X",
+    "EURUSD=X", "GBPUSD=X", "USDJPY=X", "USDCHF=X",
+    "AUDUSD=X", "USDCNY=X",
+]

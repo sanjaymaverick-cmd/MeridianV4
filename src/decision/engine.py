@@ -56,7 +56,7 @@ except ImportError:  # pragma: no cover
     TP_R = 1.5
     TRAIL_ARM_R = 1.0
     TRAIL_GIVEBACK_R = 0.4
-    EOD_FLATTEN_MIN = 15
+    EOD_FLATTEN_MIN = 0
     STOP_ATR_MULT = 1.5
     STOP_PCT_MIN, STOP_PCT_MAX = 0.008, 0.04
     COOLDOWN_SEC = 600
@@ -254,7 +254,7 @@ def manage(pos: Position, last_price: float, now: datetime, minutes_to_eod: floa
 
     if r <= -1.0:
         return Intent("SELL", 0.0, pos.stop_pct, "hard_stop", meta_prob=pos.meta_prob)
-    if _finite(minutes_to_eod, 999.0) < EOD_FLATTEN_MIN:
+    if _finite(minutes_to_eod, 999.0) <= EOD_FLATTEN_MIN:
         return Intent("SELL", 0.0, pos.stop_pct, "eod_flatten", meta_prob=pos.meta_prob)
     if held < MIN_HOLD_SEC:
         return Intent("HOLD", pos.size_pct, pos.stop_pct, "min_hold", meta_prob=pos.meta_prob)

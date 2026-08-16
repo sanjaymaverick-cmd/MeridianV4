@@ -147,6 +147,17 @@ No secrets in git.
 
 ---
 
+## Market backfill (5y daily)
+
+```powershell
+python src/data/backfill_5y.py --years 5
+```
+
+NSE via [jugaad-data](https://github.com/jugaad-py/jugaad-data). BSE / crypto / forex via yfinance.  
+Polymarket: `python src/data/backfill_5y.py --markets poly` (`docs/CRYPTO_POLY.md`).  
+Files: `data/backfill/*_daily.csv`. Details: `docs/BACKFILL.md`.  
+NSE research series: `python src/data/nse_clean.py` → `data/backfill/clean/` (`docs/NSE_DATA_CLEANING.md`).
+
 ## Next
 
 Paper fills when NSE is open → `docs/TRAINING_TODO.md`. Then `--promote`. Then `docs/M6_PRELIVE.md`.

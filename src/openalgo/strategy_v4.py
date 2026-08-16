@@ -6,7 +6,7 @@ MERIDIAN_MODE=dry  → no broker calls (default)
 MERIDIAN_MODE=paper → OpenAlgo Strategy/api (Analyzer)
 
 Env: OPENALGO_API_KEY, OPENALGO_HOST, OPENALGO_WEBHOOK_ID
-Markets: India NSE + Delta crypto only.
+Markets: India NSE/NFO + Delta crypto + Polymarket (quotes/paper).
 """
 from __future__ import annotations
 
@@ -31,6 +31,7 @@ from broker import (  # noqa: E402
 from engine import (  # noqa: E402
     LIVE_BUDGET,
     PAPER_BUDGET,
+    Engine,
     Intent,
     Position,
     RiskState,
@@ -67,17 +68,29 @@ STRATEGY_NAME = os.environ.get("STRATEGY_NAME", "MeridianV4")
 LIVE_OK = os.environ.get("MERIDIAN_LIVE_OK", "0") == "1"
 POLL_SEC = float(os.environ.get("MERIDIAN_POLL_SEC", "30"))
 WATCH = [s.strip() for s in os.environ.get(
-    "MERIDIAN_SYMBOLS", "INFY,HCLTECH,RELIANCE,TCS,BNBUSDT"
+    "MERIDIAN_SYMBOLS", "INFY,HCLTECH,RELIANCE,TCS,BTCUSDT,ETHUSDT,BNBUSDT"
 ).split(",") if s.strip()]
 
-# India cash + Delta only
+# India cash + NFO + Delta crypto. POLY symbols added at runtime from catalog.
 EXCHANGE = {
     "INFY": "NSE", "HCLTECH": "NSE", "BHARTIARTL": "NSE", "M&M": "NSE",
     "BAJAJFINSV": "NSE", "GRASIM": "NSE", "NESTLEIND": "NSE", "BRITANNIA": "NSE",
     "RELIANCE": "NSE", "TCS": "NSE", "SBIN": "NSE",
-    "BNBUSDT": "DELTA",
+    "NIFTY": "NFO", "BANKNIFTY": "NFO", "FINNIFTY": "NFO",
+    "BTCUSDT": "DELTA", "ETHUSDT": "DELTA", "BNBUSDT": "DELTA",
+    "SOLUSDT": "DELTA", "XRPUSDT": "DELTA", "DOGEUSDT": "DELTA",
+    "ADAUSDT": "DELTA", "AVAXUSDT": "DELTA", "DOTUSDT": "DELTA",
+    "LINKUSDT": "DELTA", "LTCUSDT": "DELTA", "UNIUSDT": "DELTA",
 }
-PRODUCT = {"NSE": "MIS", "DELTA": "CNC"}
+PRODUCT = {"NSE": "MIS", "NFO": "NRML", "DELTA": "CNC", "CRYPTO": "CNC", "POLY": "CNC"}
+LOT = {"NIFTY": 65, "BANKNIFTY": 15, "FINNIFTY": 25}
+
+try:
+    sys.path.insert(0, str(ROOT / "src" / "data"))
+    from polymarket import register_exchange  # noqa: E402
+    register_exchange(EXCHANGE)
+except Exception:
+    pass
 
 
 def _order_client():
@@ -94,23 +107,53 @@ def _order_client():
 
 def _quote_feed() -> QuoteFeed:
     yf = YFinanceFeed()
+    try:
+        from polymarket_feed import PolymarketFeed
+        poly = PolymarketFeed()
+    except Exception:
+        poly = None
     if MODE == "dry":
         return DryFeed()
     if not API_KEY:
-        return yf  # paper-train without broker quotes
+        return FallbackFeed(yf, poly) if poly else yf
     from openalgo import api  # type: ignore
-    return FallbackFeed(OpenAlgoFeed(api(api_key=API_KEY, host=HOST)), yf)
+    oa = FallbackFeed(OpenAlgoFeed(api(api_key=API_KEY, host=HOST)), yf)
+    return FallbackFeed(oa, poly) if poly else oa
 
 
-def _qty(price: float, size_pct: float, budget: float | None = None) -> float:
+def _qty(price: float, size_pct: float, budget: float | None = None,
+         symbol: str = "") -> float:
     budget = PAPER_BUDGET if budget is None else budget
     if MODE == "live":
         budget = LIVE_BUDGET
     risk = max(budget * size_pct, 0.0)
     if price <= 0:
         return 0.0
+    lot = LOT.get(symbol, 0)
+    if lot > 0:
+        n = max(1, int(round(risk / (price * lot))))
+        return float(n * lot)
     q = risk / price
+    ex = EXCHANGE.get(symbol, "")
+    if ex in ("DELTA", "CRYPTO"):
+        return max(0.001, round(q, 4))
+    if ex == "POLY":
+        # outcome tokens ~$0–1; size in shares
+        return max(1.0, round(risk / max(price, 0.01), 2))
     return max(1.0, round(q, 1)) if price < 5000 else max(0.01, round(q, 4))
+
+
+def _order_ok(resp) -> bool:
+    if resp is None or resp is True:
+        return True
+    if not isinstance(resp, dict):
+        return True
+    st = str(resp.get("status") or resp.get("Status") or "").lower()
+    if st in ("error", "failed", "fail", "reject", "rejected"):
+        return False
+    if resp.get("error") or resp.get("message") == "error":
+        return False
+    return True
 
 
 def preflight(client) -> None:
@@ -142,6 +185,7 @@ class Host:
             self.risk.n_open = len(self.pos)
         if MODE in ("paper", "live"):
             preflight(self.client)
+        self.eng = Engine(art=self.art, risk=self.risk, model=self.model)
         kind = self.model.kind if self.model is not None else "json"
         ver = self.model.version if self.model is not None else "?"
         print(f"model {kind} v={ver} trained={getattr(self.model, 'trained', False)}", flush=True)
@@ -156,6 +200,11 @@ class Host:
         notify(self.client, OA_USER, f"{STRATEGY_NAME} {MODE} {action} {symbol} x{qty}")
         if self.client is None:
             return True
+        ex = EXCHANGE.get(symbol, "NSE")
+        if ex == "POLY":
+            # No OpenAlgo plugin. Paper/dry records locally; live needs CLOB keys later.
+            print("poly_local", action, symbol, qty, flush=True)
+            return MODE != "live"
         try:
             if self.kind == "api":
                 ex = EXCHANGE.get(symbol, "NSE")
@@ -168,12 +217,15 @@ class Host:
                     ptype = "LIMIT"
                     if last_price > 0:
                         kw["price"] = str(round(last_price, 2))
-                self.client.placeorder(
+                resp = self.client.placeorder(
                     strategy=STRATEGY_NAME, symbol=symbol, action=action,
                     exchange=ex, price_type=ptype, product=product, quantity=qty, **kw,
                 )
             else:
-                self.client.strategyorder(symbol, action, qty)
+                resp = self.client.strategyorder(symbol, action, qty)
+            if not _order_ok(resp):
+                print("order_reject", symbol, action, resp, flush=True)
+                return False
             return True
         except Exception as e:
             print("order_fail", symbol, action, e, flush=True)
@@ -190,11 +242,12 @@ class Host:
         if last_price <= 0:
             return Intent("FLAT", 0.0, 0.0, "bad_price")
 
+        self.eng.risk = self.risk
         if sym in self.pos:
-            intent = manage(self.pos[sym], last_price, now, sig.minutes_to_eod)
+            intent = self.eng.manage(self.pos[sym], last_price, now, sig.minutes_to_eod)
             if intent.action == "SELL":
                 pos = self.pos[sym]
-                qty = pos.qty or _qty(last_price, pos.size_pct)
+                qty = pos.qty or _qty(last_price, pos.size_pct, symbol=sym)
                 if not self._send(sym, "SELL", qty, last_price, now):
                     return Intent("HOLD", pos.size_pct, pos.stop_pct, "order_fail",
                                   meta_prob=pos.meta_prob)
@@ -233,9 +286,9 @@ class Host:
                 self._save()
             return intent
 
-        intent = decide(sig, self.art, self.risk, now)
+        intent = self.eng.decide(sig, now)
         if intent.action == "BUY":
-            qty = _qty(last_price, intent.size_pct)
+            qty = _qty(last_price, intent.size_pct, symbol=sym)
             if not self._send(sym, "BUY", qty, last_price, now):
                 return Intent("FLAT", 0.0, 0.0, "order_fail", meta_prob=intent.meta_prob)
             self.pos[sym] = Position(
@@ -268,7 +321,7 @@ def poll_once(
     intents: list[Intent] = []
     for sym, q in (got or {}).items():
         try:
-            if q.exchange == "NSE" and not nse_open(now) and MODE != "dry":
+            if q.exchange in ("NSE", "NFO") and not nse_open(now) and MODE != "dry":
                 continue
             sig = signal_from_quote(q, now)
             if MODE != "dry" and host.kind == "api":

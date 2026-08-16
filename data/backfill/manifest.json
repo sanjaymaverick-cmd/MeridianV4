@@ -1,0 +1,37 @@
+{
+  "ts": "2026-08-16T06:15:12.229325+00:00",
+  "from": "2021-08-15",
+  "to": "2026-08-16",
+  "years": 5,
+  "markets": [
+    "crypto",
+    "poly"
+  ],
+  "sources": {
+    "nse": "jugaad-data (https://github.com/jugaad-py/jugaad-data)",
+    "bse": "yfinance (.BO / ^BSESN)",
+    "crypto": "yfinance (Delta USDT perps on the live map)",
+    "forex": "yfinance (jugaad RBI is current-rates only)",
+    "poly": "Polymarket Gamma + CLOB prices-history (public, no key)"
+  },
+  "stats": {
+    "ok": 10,
+    "fail": 1,
+    "skipped": 10,
+    "rows": 16252
+  },
+  "errors": [
+    {
+      "symbol": "POLY",
+      "error": "<urlopen error [WinError 10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond>"
+    }
+  ],
+  "combined_rows": {
+    "nse_eq": 62469,
+    "nse_index": 7383,
+    "bse_eq": 37135,
+    "bse_index": 1233,
+    "crypto": 34532,
+    "forex": 13007
+  }
+}

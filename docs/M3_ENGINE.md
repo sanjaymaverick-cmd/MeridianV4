@@ -15,7 +15,7 @@
 | Condition | Action |
 |-----------|--------|
 | R ≤ −1 | SELL hard_stop (even < min hold) |
-| minutes_to_eod < 15 | SELL eod_flatten |
+| minutes_to_eod ≤ 0 (15:15 IST) | SELL eod_flatten |
 | held < 300s | HOLD (no scratch) |
 | R ≥ 1.5 | SELL take_profit |
 | high_R ≥ 1.0 and R ≤ 0.4 | SELL trail |

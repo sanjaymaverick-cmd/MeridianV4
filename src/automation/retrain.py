@@ -37,7 +37,7 @@ from m2_research_baseline import (  # noqa: E402
     purged_kfold,
 )
 from registry import CAND_DIR, LIVE, promote, register  # noqa: E402
-from uniqueness import average_uniqueness  # noqa: E402
+from uniqueness import average_uniqueness, sequential_bootstrap  # noqa: E402
 
 
 def _mean_auc(rows) -> float | None:
@@ -62,7 +62,27 @@ def load_frames(include_synth: bool) -> pd.DataFrame:
     return df
 
 
-def real_metrics(df: pd.DataFrame, ins_auc: float | None) -> dict:
+def _real_in_sample_auc(real: pd.DataFrame) -> float | None:
+    """In-sample AUC on is_synthetic==0 only. Never uses synth."""
+    if len(real) < 20 or int(real["y_meta"].sum()) < 2:
+        return None
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.metrics import roc_auc_score
+    from sklearn.preprocessing import StandardScaler
+    X = real[FEATURES].fillna(0).to_numpy(dtype=float)
+    y = real["y_meta"].to_numpy()
+    w = np.clip(real["avg_uniqueness"].to_numpy(), 1e-6, None)
+    if len(np.unique(y)) < 2:
+        return None
+    sc = StandardScaler()
+    Xs = sc.fit_transform(X)
+    clf = LogisticRegression(max_iter=800, class_weight="balanced", random_state=42)
+    clf.fit(Xs, y, sample_weight=w)
+    p = clf.predict_proba(Xs)[:, 1]
+    return float(roc_auc_score(y, p))
+
+
+def real_metrics(df: pd.DataFrame, ins_auc: float | None = None) -> dict:
     real = df[df["is_synthetic"] == 0].copy()
     n_real = len(real)
     purged_auc = cpcv_auc = None
@@ -87,7 +107,7 @@ def real_metrics(df: pd.DataFrame, ins_auc: float | None) -> dict:
         "n_real_y_meta_pos": int(real["y_meta"].sum()) if n_real else 0,
         "purged_auc": purged_auc,
         "cpcv_auc": cpcv_auc,
-        "in_sample_auc": ins_auc,
+        "in_sample_auc": _real_in_sample_auc(real),
         "n_synth_in_eval": 0,
         "quality_frac_real": (
             float(real["is_quality_hold"].mean()) if n_real else 0.0
@@ -103,13 +123,21 @@ def run(include_synth: bool = True, do_promote: bool = False, force: bool = Fals
     y = df["y_meta"].to_numpy()
     X = df[FEATURES].fillna(0).to_numpy(dtype=float)
     w = np.clip(df["avg_uniqueness"].to_numpy(), 1e-6, None)
+    boot = sequential_bootstrap(w, n_samples=len(df), seed=42)
+    Xb, yb, wb = X[boot], y[boot], w[boot]
 
     vid = "m5_" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     dest = CAND_DIR / f"{vid}.json"
-    # TODO(training): LightGBM via meta_label.train.train_lightgbm when gates can pass
-    art = fit_export(X, y, w, dest=dest, version=vid)
+    art = fit_export(Xb, yb, wb, dest=dest, version=vid)
+    try:
+        from train import fit_lightgbm
+        lgb_path = dest.with_suffix(".txt")
+        fit_lightgbm(Xb, yb, wb, lgb_path, version=vid)
+        art["lgb"] = str(lgb_path).replace("\\", "/")
+    except Exception as e:
+        print("lgb_skip", e)
 
-    metrics = real_metrics(df, art["in_sample"]["auc"])
+    metrics = real_metrics(df)
     metrics["n_train"] = int(len(df))
     metrics["n_synth_train"] = int(df["is_synthetic"].sum())
     report = evaluate(metrics)
