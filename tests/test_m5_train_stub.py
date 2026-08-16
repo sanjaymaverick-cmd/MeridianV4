@@ -18,6 +18,6 @@ def test_empty_metrics_fail_closed():
     assert "n_real_clean" in r.reason
 
 
-def test_lightgbm_trainer_is_todo():
-    with pytest.raises(NotImplementedError):
-        train_lightgbm(Path("x.csv"), Path("y.json"))
+def test_lightgbm_trainer_needs_labeled_csv(tmp_path):
+    with pytest.raises((FileNotFoundError, ValueError, ImportError, OSError)):
+        train_lightgbm(tmp_path / "missing.csv", tmp_path / "out.txt")

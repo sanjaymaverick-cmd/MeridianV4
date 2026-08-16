@@ -108,30 +108,56 @@ class UntrainedModel:
 
 @dataclass
 class LightGBMModel:
-    """TODO(training): load promoted LightGBM booster. Not live until gates pass."""
+    """Booster file + optional JSON artefact for threshold/features."""
     path: Path
+    booster: object = field(default=None, repr=False)
     kind: str = "lightgbm"
-    version: str = "untrained_lgb"
-    trained: bool = False
+    version: str = "lgb"
+    trained: bool = True
     threshold: float = 0.55
     artefact: Optional[dict] = field(default=None, repr=False)
+    features: list[str] = field(default_factory=list)
 
-    def __post_init__(self) -> None:
-        raise NotImplementedError(
-            "TODO(training): LightGBM live scorer after M5 promote on real holds"
+    @classmethod
+    def load(cls, path: Path, art: dict | None = None) -> "LightGBMModel":
+        import lightgbm as lgb
+        booster = lgb.Booster(model_file=str(path))
+        names = list((art or {}).get("features") or [])
+        if not names:
+            names = list(booster.feature_name() or [])
+        return cls(
+            path=Path(path), booster=booster, artefact=art,
+            version=str((art or {}).get("version", "lgb")),
+            threshold=float((art or {}).get("threshold", 0.55)),
+            features=names,
         )
 
     def predict(self, features: Mapping[str, float]) -> float:
-        raise NotImplementedError("TODO(training)")
+        if self.booster is None:
+            return 0.0
+        names = self.features or list(features.keys())
+        row = [float(features.get(n, 0.0) or 0.0) for n in names]
+        p = float(self.booster.predict([row])[0])
+        if p != p:
+            return 0.0
+        return 0.0 if p < 0.0 else 1.0 if p > 1.0 else p
 
 
 def load_model(path: Path | None = None) -> MetaLabelModel:
-    """Load live artefact. Missing or invalid → UntrainedModel. Never raises."""
+    """Prefer LightGBM sidecar if present; else JSON logistic. Never raises."""
     p = Path(path) if path else DEFAULT_ARTEFACT
-    if not p.exists():
-        return UntrainedModel()
-    try:
-        art = validate_artefact(load_artefact(p))
-    except (OSError, ValueError, KeyError, TypeError):
+    art = None
+    if p.exists():
+        try:
+            art = validate_artefact(load_artefact(p))
+        except (OSError, ValueError, KeyError, TypeError):
+            art = None
+    lgb_path = p.with_suffix(".txt")
+    if lgb_path.exists():
+        try:
+            return LightGBMModel.load(lgb_path, art)
+        except Exception:
+            pass
+    if art is None:
         return UntrainedModel()
     return JsonLogisticModel(art=art)

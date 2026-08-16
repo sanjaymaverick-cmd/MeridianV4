@@ -61,6 +61,6 @@ def test_validate_rejects_length_mismatch():
     assert isinstance(load_model(), JsonLogisticModel)
 
 
-def test_lightgbm_stub_not_implemented():
-    with pytest.raises(NotImplementedError):
-        LightGBMModel(path=Path("unused.txt"))
+def test_lightgbm_without_booster_is_zero():
+    m = LightGBMModel(path=Path("unused.txt"), booster=None, trained=False)
+    assert m.predict({"p_success": 0.6}) == 0.0

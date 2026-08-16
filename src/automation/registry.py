@@ -38,6 +38,9 @@ def promote(candidate: Path, live: Path | None = None) -> Path:
     if dest.exists():
         shutil.copy2(dest, dest.with_suffix(".json.bak"))
     shutil.copy2(candidate, dest)
+    sidecar = Path(candidate).with_suffix(".txt")
+    if sidecar.exists():
+        shutil.copy2(sidecar, dest.with_suffix(".txt"))
     return dest
 
 

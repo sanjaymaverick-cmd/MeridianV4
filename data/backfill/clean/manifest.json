@@ -1,0 +1,31 @@
+{
+  "ts": "2026-08-15T17:52:04.808526+00:00",
+  "keep_muhurat": false,
+  "fetch_splits": true,
+  "stats": {
+    "nse_eq_daily.csv": {
+      "in": 62469,
+      "out": 61987,
+      "dropped": 482,
+      "muhurat_in": 125
+    },
+    "nse_index_daily.csv": {
+      "in": 7383,
+      "out": 7354,
+      "dropped": 29,
+      "muhurat_in": 24
+    },
+    "bse_eq_daily.csv": {
+      "in": 37135,
+      "out": 35413,
+      "dropped": 1722,
+      "muhurat_in": 94
+    },
+    "fo_rolls": 65
+  },
+  "rules": [
+    "split_bonus_adjusted",
+    "drop_outside_0915_1530_and_muhurat",
+    "fo_roll_last_thursday_until_2025-08 then last_tuesday"
+  ]
+}

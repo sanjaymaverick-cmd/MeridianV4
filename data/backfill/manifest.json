@@ -1,0 +1,81 @@
+{
+  "ts": "2026-08-15T17:42:42.158918+00:00",
+  "from": "2021-08-14",
+  "to": "2026-08-15",
+  "years": 5,
+  "markets": [
+    "nse",
+    "bse",
+    "crypto",
+    "forex"
+  ],
+  "sources": {
+    "nse": "jugaad-data (https://github.com/jugaad-py/jugaad-data) + yfinance fallback",
+    "bse": "yfinance .BO where full; else nse_dual_list",
+    "crypto": "yfinance",
+    "forex": "yfinance (jugaad RBI is current-rates only)"
+  },
+  "notes": [
+    "TATAMOTORS via jugaad + TMPV.NS (ticker rename)",
+    "NIFTY_MIDCAP_50 via ^NSMIDCP (Nifty Midcap 100 proxy)",
+    "NIFTY_NEXT_50 via JUNIORBEES.NS ETF"
+  ],
+  "combined": {
+    "nse_eq": {
+      "rows": 62469,
+      "symbols": 51,
+      "from": "2021-08-15",
+      "to": "2026-08-14",
+      "sources": [
+        "jugaad-data",
+        "yfinance"
+      ]
+    },
+    "nse_index": {
+      "rows": 7383,
+      "symbols": 6,
+      "from": "2021-08-16",
+      "to": "2026-08-14",
+      "sources": [
+        "yfinance"
+      ]
+    },
+    "bse_eq": {
+      "rows": 37135,
+      "symbols": 30,
+      "from": "2021-08-15",
+      "to": "2026-08-14",
+      "sources": [
+        "nse_dual_list",
+        "yfinance"
+      ]
+    },
+    "bse_index": {
+      "rows": 1233,
+      "symbols": 1,
+      "from": "2021-08-16",
+      "to": "2026-08-14",
+      "sources": [
+        "yfinance"
+      ]
+    },
+    "crypto": {
+      "rows": 18280,
+      "symbols": 10,
+      "from": "2021-08-14",
+      "to": "2026-08-15",
+      "sources": [
+        "yfinance"
+      ]
+    },
+    "forex": {
+      "rows": 13007,
+      "symbols": 10,
+      "from": "2021-08-16",
+      "to": "2026-08-15",
+      "sources": [
+        "yfinance"
+      ]
+    }
+  }
+}

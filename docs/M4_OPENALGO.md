@@ -18,7 +18,7 @@ Host: SIGTERM/SIGINT flush state. Failed `placeorder` does not book/drop a posit
 ## Loop
 `quotes/multiquotes` → causal primary (`signal_from_quote`) → `decide`/`manage` → `placeorder` or `strategyorder` → SELL appends `is_synthetic=0`.
 
-NSE session 09:15–15:30 IST, flatten 15:15. `BNBUSDT` on DELTA, no cash EOD.
+NSE/NFO session 09:15–15:30 IST, flatten at 15:15 (`minutes_to_eod <= 0`). Holidays from `nse_calendar`. `BNBUSDT` on DELTA, no cash EOD. NIFTY/BANKNIFTY/FINNIFTY are NFO lots — not on the default watch.
 
 ## Env
 `MERIDIAN_ROOT`, `MERIDIAN_MODE=dry|paper`, `MERIDIAN_SYMBOLS`, `MERIDIAN_POLL_SEC`, `OPENALGO_API_KEY`, `OPENALGO_HOST` (or `HOST_SERVER`), `OPENALGO_WEBHOOK_ID`, `STRATEGY_NAME`.
