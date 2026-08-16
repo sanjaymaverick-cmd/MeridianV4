@@ -227,7 +227,7 @@ def combine(folder: Path, dest: Path) -> int:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--years", type=int, default=5)
-    ap.add_argument("--markets", default="nse,bse,crypto,forex")
+    ap.add_argument("--markets", default="nse,bse,crypto,forex,poly")
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--sleep", type=float, default=0.6, help="pause between NSE calls")
     ap.add_argument("--nse-source", choices=("jugaad", "yfinance"), default="jugaad")
@@ -283,6 +283,30 @@ def main() -> int:
                      lambda x=t: fetch_yf(x, x, "CRYPTO", start, end),
                      args.force, 0.1, stats)
 
+    if "poly" in markets or "polymarket" in markets:
+        print("=== POLYMARKET (gamma + clob history) ===")
+        try:
+            from polymarket import list_markets, prices_history, save_catalog
+            cats = list_markets(limit=15)
+            save_catalog(cats)
+            print(f"  catalog n={len(cats)}")
+            for m in cats:
+                dest = OUT / "polymarket" / f"{m['symbol']}.csv"
+
+                def _one(meta=m):
+                    hist = prices_history(meta["token_id"])
+                    if not hist:
+                        return None
+                    rows = [{"date": t, "open": p, "high": p, "low": p, "close": p, "volume": 0}
+                            for t, p in hist]
+                    return _norm(pd.DataFrame(rows), meta["symbol"], "POLY", "polymarket")
+
+                _run_one(f"POLY:{m['symbol']}", dest, _one, args.force, 0.2, stats, timeout_s=45.0)
+        except Exception as e:
+            stats["fail"] += 1
+            stats["errors"].append({"symbol": "POLY", "error": str(e)})
+            print("  FAIL POLY:", e, flush=True)
+
     if "forex" in markets:
         print("=== FOREX (yfinance) ===")
         for t in FOREX:
@@ -300,6 +324,7 @@ def main() -> int:
         ("bse_index", OUT / "bse" / "index"),
         ("crypto", OUT / "crypto"),
         ("forex", OUT / "forex"),
+        ("polymarket", OUT / "polymarket"),
     ):
         if folder.exists():
             n = combine(folder, OUT / f"{venue}_daily.csv")
@@ -315,8 +340,9 @@ def main() -> int:
         "sources": {
             "nse": "jugaad-data (https://github.com/jugaad-py/jugaad-data)",
             "bse": "yfinance (.BO / ^BSESN)",
-            "crypto": "yfinance",
+            "crypto": "yfinance (Delta USDT perps on the live map)",
             "forex": "yfinance (jugaad RBI is current-rates only)",
+            "poly": "Polymarket Gamma + CLOB prices-history (public, no key)",
         },
         "stats": {k: stats[k] for k in ("ok", "fail", "skipped", "rows")},
         "errors": stats["errors"],

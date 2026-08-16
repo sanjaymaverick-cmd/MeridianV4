@@ -16,7 +16,7 @@ jugaad-data has no BSE, crypto, or FX history.
 
 ```powershell
 pip install jugaad-data yfinance
-python src/data/backfill_5y.py --years 5
+python src/data/backfill_5y.py --years 5 --markets nse,bse,crypto,forex,poly
 # if NSE blocks:
 python src/data/backfill_5y.py --markets nse --nse-source yfinance
 ```

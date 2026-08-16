@@ -10,6 +10,7 @@ NSE_OPEN = time(9, 15)
 NSE_CLOSE = time(15, 30)
 NSE_FLATTEN = time(15, 15)
 NFO_EXCHANGES = {"NFO", "BFO", "NSE_FO"}
+ALWAYS_OPEN = {"DELTA", "CRYPTO", "POLY", "POLYMARKET"}
 
 _DATA = Path(__file__).resolve().parents[1] / "data"
 if str(_DATA) not in sys.path:
@@ -30,8 +31,12 @@ def _holiday(d) -> bool:
         return d.weekday() >= 5
 
 
+def is_24h(exchange: str) -> bool:
+    return (exchange or "").upper() in ALWAYS_OPEN
+
+
 def minutes_since_midnight(now: datetime, exchange: str = "NSE") -> float:
-    if exchange == "DELTA":
+    if is_24h(exchange):
         u = now.astimezone(timezone.utc) if now.tzinfo else now.replace(tzinfo=timezone.utc)
         return u.hour * 60 + u.minute + u.second / 60.0
     local = to_ist(now)
@@ -39,7 +44,7 @@ def minutes_since_midnight(now: datetime, exchange: str = "NSE") -> float:
 
 
 def minutes_to_eod(now: datetime, exchange: str = "NSE") -> float:
-    if exchange == "DELTA":
+    if is_24h(exchange):
         return 999.0
     local = to_ist(now)
     flatten = local.replace(hour=NSE_FLATTEN.hour, minute=NSE_FLATTEN.minute, second=0, microsecond=0)

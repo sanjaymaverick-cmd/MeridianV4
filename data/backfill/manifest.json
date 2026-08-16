@@ -1,81 +1,37 @@
 {
-  "ts": "2026-08-15T17:42:42.158918+00:00",
-  "from": "2021-08-14",
-  "to": "2026-08-15",
+  "ts": "2026-08-16T06:15:12.229325+00:00",
+  "from": "2021-08-15",
+  "to": "2026-08-16",
   "years": 5,
   "markets": [
-    "nse",
-    "bse",
     "crypto",
-    "forex"
+    "poly"
   ],
   "sources": {
-    "nse": "jugaad-data (https://github.com/jugaad-py/jugaad-data) + yfinance fallback",
-    "bse": "yfinance .BO where full; else nse_dual_list",
-    "crypto": "yfinance",
-    "forex": "yfinance (jugaad RBI is current-rates only)"
+    "nse": "jugaad-data (https://github.com/jugaad-py/jugaad-data)",
+    "bse": "yfinance (.BO / ^BSESN)",
+    "crypto": "yfinance (Delta USDT perps on the live map)",
+    "forex": "yfinance (jugaad RBI is current-rates only)",
+    "poly": "Polymarket Gamma + CLOB prices-history (public, no key)"
   },
-  "notes": [
-    "TATAMOTORS via jugaad + TMPV.NS (ticker rename)",
-    "NIFTY_MIDCAP_50 via ^NSMIDCP (Nifty Midcap 100 proxy)",
-    "NIFTY_NEXT_50 via JUNIORBEES.NS ETF"
-  ],
-  "combined": {
-    "nse_eq": {
-      "rows": 62469,
-      "symbols": 51,
-      "from": "2021-08-15",
-      "to": "2026-08-14",
-      "sources": [
-        "jugaad-data",
-        "yfinance"
-      ]
-    },
-    "nse_index": {
-      "rows": 7383,
-      "symbols": 6,
-      "from": "2021-08-16",
-      "to": "2026-08-14",
-      "sources": [
-        "yfinance"
-      ]
-    },
-    "bse_eq": {
-      "rows": 37135,
-      "symbols": 30,
-      "from": "2021-08-15",
-      "to": "2026-08-14",
-      "sources": [
-        "nse_dual_list",
-        "yfinance"
-      ]
-    },
-    "bse_index": {
-      "rows": 1233,
-      "symbols": 1,
-      "from": "2021-08-16",
-      "to": "2026-08-14",
-      "sources": [
-        "yfinance"
-      ]
-    },
-    "crypto": {
-      "rows": 18280,
-      "symbols": 10,
-      "from": "2021-08-14",
-      "to": "2026-08-15",
-      "sources": [
-        "yfinance"
-      ]
-    },
-    "forex": {
-      "rows": 13007,
-      "symbols": 10,
-      "from": "2021-08-16",
-      "to": "2026-08-15",
-      "sources": [
-        "yfinance"
-      ]
+  "stats": {
+    "ok": 10,
+    "fail": 1,
+    "skipped": 10,
+    "rows": 16252
+  },
+  "errors": [
+    {
+      "symbol": "POLY",
+      "error": "<urlopen error [WinError 10060] A connection attempt failed because the connected party did not properly respond after a period of time, or established connection failed because connected host has failed to respond>"
     }
+  ],
+  "combined_rows": {
+    "nse_eq": 62469,
+    "nse_index": 7383,
+    "bse_eq": 37135,
+    "bse_index": 1233,
+    "crypto": 34532,
+    "forex": 13007
   }
 }

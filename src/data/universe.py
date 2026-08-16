@@ -37,10 +37,29 @@ BSE_INDEX = [
     ("SENSEX", "^BSESN"),
 ]
 
+# Yahoo tickers for 5y daily. OpenAlgo/Delta symbols in CRYPTO_OA.
 CRYPTO = [
     "BTC-USD", "ETH-USD", "BNB-USD", "SOL-USD", "XRP-USD",
     "DOGE-USD", "ADA-USD", "AVAX-USD", "DOT-USD", "LINK-USD",
+    "LTC-USD", "BCH-USD", "UNI-USD", "ATOM-USD", "NEAR-USD",
+    "APT-USD", "SUI-USD", "TON-USD", "TRX-USD", "XLM-USD",
 ]
+
+# Meridian symbol → (exchange, yfinance ticker). Delta USDT perps.
+CRYPTO_OA = {
+    "BTCUSDT": ("DELTA", "BTC-USD"),
+    "ETHUSDT": ("DELTA", "ETH-USD"),
+    "BNBUSDT": ("DELTA", "BNB-USD"),
+    "SOLUSDT": ("DELTA", "SOL-USD"),
+    "XRPUSDT": ("DELTA", "XRP-USD"),
+    "DOGEUSDT": ("DELTA", "DOGE-USD"),
+    "ADAUSDT": ("DELTA", "ADA-USD"),
+    "AVAXUSDT": ("DELTA", "AVAX-USD"),
+    "DOTUSDT": ("DELTA", "DOT-USD"),
+    "LINKUSDT": ("DELTA", "LINK-USD"),
+    "LTCUSDT": ("DELTA", "LTC-USD"),
+    "UNIUSDT": ("DELTA", "UNI-USD"),
+}
 
 FOREX = [
     "USDINR=X", "EURINR=X", "GBPINR=X", "JPYINR=X",
